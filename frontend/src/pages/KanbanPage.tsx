@@ -29,7 +29,7 @@ const COLUMN_ICONS: Record<string, React.ReactNode> = {
   PACKAGING: <Package size={18} />,
 };
 
-function KanbanCard({ step }: { step: ProductionStep }) {
+function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: string, status: StepStatus) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.id });
   
   const style = {
@@ -49,17 +49,20 @@ function KanbanCard({ step }: { step: ProductionStep }) {
       className="kanban-card"
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)' }}>
-          {step.item?.order?.orderNumber}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)' }}>
+            {step.item?.order?.orderNumber}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>
+            {step.item?.productName}
+          </span>
+        </div>
         <span {...attributes} {...listeners} style={{ cursor: 'grab', color: 'var(--color-text-3)' }}>
           <GripVertical size={14} />
         </span>
       </div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
-        {step.item?.productName}
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 12 }}>
+
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
         {step.item?.order?.client?.name}
       </div>
       
@@ -71,13 +74,26 @@ function KanbanCard({ step }: { step: ProductionStep }) {
         </div>
       )}
 
-      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>
-          {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : 'Aguardando'}
-        </span>
-        <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
-          Esp: {step.estimatedMinutes}m
-        </span>
+      <div className="card-footer" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {step.status === 'PENDING' ? (
+            <button className="btn btn-primary btn-sm" onClick={() => onUpdate(step.id, 'IN_PROGRESS')} style={{ padding: '2px 8px', fontSize: 10 }}>
+              🚀 Iniciar
+            </button>
+          ) : (
+            <button className="btn btn-success btn-sm" onClick={() => onUpdate(step.id, 'COMPLETED')} style={{ padding: '2px 8px', fontSize: 10 }}>
+              ✅ Concluir
+            </button>
+          )}
+        </div>
+        <div style={{ textAlign: 'right' }}>
+           <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4, display: 'block' }}>
+            {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : 'Aguardando'}
+          </span>
+          <span style={{ fontSize: 9, color: 'var(--color-text-3)' }}>
+            Esp: {step.estimatedMinutes}m
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -133,10 +149,19 @@ export default function KanbanPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleUpdateStatus = async (id: string, status: StepStatus) => {
+    try {
+      await api.put(`/production/steps/${id}`, { status });
+      toast.success(status === 'IN_PROGRESS' ? 'Etapa iniciada!' : 'Etapa concluída!');
+      fetchSteps();
+    } catch (err) {
+      toast.error('Erro ao atualizar etapa');
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
-    // Lógica DND simplificada para a Vercel
   };
 
   const columns: StepName[] = ['CUTTING', 'MOLDING', 'COOLING', 'FINISHING', 'PACKAGING'];
@@ -161,7 +186,7 @@ export default function KanbanPage() {
                 key={col} 
                 stepName={col} 
                 steps={steps.filter(s => s.stepName === col)} 
-                onUpdateStep={() => {}} 
+                onUpdateStep={handleUpdateStatus} 
               />
             ))}
           </DndContext>
