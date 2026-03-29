@@ -111,6 +111,26 @@ router.get('/', async (_req, res) => {
     // Alertas não lidos
     const unreadAlerts = await prisma.alert.count({ where: { isRead: false } });
 
+    // Fila agregada por setor e produto
+    const stepsForQueue = await prisma.productionStep.findMany({
+      where: { status: { in: [StepStatus.PENDING, StepStatus.IN_PROGRESS] } },
+      include: { item: true }
+    });
+
+    const queueMap: Record<string, Record<string, number>> = {};
+    stepsForQueue.forEach(step => {
+      const sector = step.stepName;
+      const product = step.item.productName;
+      if (!queueMap[sector]) queueMap[sector] = {};
+      if (!queueMap[sector][product]) queueMap[sector][product] = 0;
+      queueMap[sector][product] += step.item.quantity;
+    });
+
+    const aggregatedQueue = Object.entries(queueMap).map(([sector, products]) => ({
+      sector,
+      items: Object.entries(products).map(([name, qty]) => ({ name, qty }))
+    }));
+
     res.json({
       orders: { total, pending, inProduction, finished, delivered, cancelled },
       delayedOrders,
@@ -120,6 +140,7 @@ router.get('/', async (_req, res) => {
       avgTimeByStep,
       lowStockCount,
       unreadAlerts,
+      aggregatedQueue,
     });
   } catch (error) {
     console.error(error);

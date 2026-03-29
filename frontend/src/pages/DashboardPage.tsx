@@ -137,6 +137,35 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      <div className="card">
+        <div className="flex items-center gap-2 mb-6">
+          <ClipboardList size={20} style={{ color: 'var(--color-primary)' }} />
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Fila Global de Produção (O que produzir hoje)</h3>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+          {(data.aggregatedQueue || []).map((q: any) => (
+            <div key={q.sector} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: 16, borderTop: `4px solid ${STEP_COLORS[q.sector] || 'var(--color-border)'}` }}>
+              <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {STEP_LABELS[q.sector] || q.sector}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {q.items.map((item: any, idx: number) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-1)' }}>{item.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-primary)' }}>{item.qty}x</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {(!data.aggregatedQueue || data.aggregatedQueue.length === 0) && (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>
+              Fila de produção vazia no momento.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
