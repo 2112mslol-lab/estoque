@@ -103,4 +103,35 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// PUT /api/orders/:id - Atualizar pedido
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { deliveryDate, notes, status } = req.body;
+  try {
+    const order = await prisma.order.update({
+      where: { id },
+      data: {
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
+        notes,
+        status
+      },
+      include: { client: true, items: true }
+    });
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar pedido' });
+  }
+});
+
+// DELETE /api/orders/:id - Excluir pedido
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.order.delete({ where: { id } });
+    res.json({ message: 'Pedido excluído' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao excluir pedido' });
+  }
+});
+
 export default router;

@@ -53,8 +53,8 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)' }}>
             {step.item?.order?.orderNumber}
           </span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>
-            {step.item?.productName}
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>
+            {step.item?.quantity}x {step.item?.productName}
           </span>
         </div>
         <span {...attributes} {...listeners} style={{ cursor: 'grab', color: 'var(--color-text-3)' }}>

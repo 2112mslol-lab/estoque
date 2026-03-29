@@ -210,11 +210,55 @@ function CreateOrderModal({ order, onClose, onSaved }: {
   );
 }
 
+function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">Detalhes do Pedido {order.orderNumber}</h2>
+          <button className="btn btn-ghost" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 4 }}>CLIENTE</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{order.client.name}</div>
+          </div>
+          
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 8 }}>PEÇAS EM PRODUÇÃO</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {order.items.map((item, idx) => (
+                <div key={idx} style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700 }}>{item.quantity}x {item.productName}</span>
+                    <span style={{ fontSize: 11, background: 'var(--color-primary-light)', padding: '2px 6px', borderRadius: 4 }}>{item.status}</span>
+                  </div>
+                  {item.customization && <div style={{ fontSize: 12, color: 'var(--color-text-2)', fontStyle: 'italic' }}>Obs: {item.customization}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 4 }}>CONSIDERAÇÕES</div>
+            <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>{order.notes || 'Sem observações adicionais.'}</div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary w-full" onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [viewOrder, setViewOrder] = useState<Order | null>(null);
 
   const fetchOrders = async () => {
     const res = await api.get<Order[]>('/orders');
@@ -223,6 +267,27 @@ export default function OrdersPage() {
   };
 
   useEffect(() => { fetchOrders(); }, []);
+
+  const handleDelete = async (id: string, number: string) => {
+    if (!window.confirm(`Deseja realmente excluir o pedido ${number}? Esta ação é permanente.`)) return;
+    try {
+      await api.delete(`/orders/${id}`);
+      toast.success('Pedido removido');
+      fetchOrders();
+    } catch (err) {
+      toast.error('Erro ao excluir');
+    }
+  };
+
+  const handleEdit = (order: Order) => {
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  const handleOpenCreate = () => {
+    setSelectedOrder(null);
+    setShowModal(true);
+  };
 
   const filtered = orders.filter(o => 
     o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -237,7 +302,7 @@ export default function OrdersPage() {
           <h1 className="page-title">Entrada de Produção</h1>
           <p className="page-subtitle">{orders.length} pedidos em fluxo</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={handleOpenCreate}>
           <Plus size={16} /> Nova Produção
         </button>
       </div>
@@ -312,8 +377,9 @@ export default function OrdersPage() {
                 <td style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{format(new Date(order.createdAt), "dd/MM - HH:mm", { locale: ptBR })}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-ghost btn-sm" title="Rastrear"><Eye size={16} /></button>
-                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }}><Trash2 size={14} /></button>
+                    <button className="btn btn-ghost btn-sm" title="Detalhes" onClick={() => setViewOrder(order)}><Eye size={16} /></button>
+                    <button className="btn btn-ghost btn-sm" title="Editar" onClick={() => handleEdit(order)}><Edit2 size={16} /></button>
+                    <button className="btn btn-ghost btn-sm" title="Excluir" style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(order.id, order.orderNumber)}><Trash2 size={14} /></button>
                   </div>
                 </td>
               </tr>
@@ -323,7 +389,11 @@ export default function OrdersPage() {
       </div>
 
       {showModal && (
-        <CreateOrderModal onClose={() => setShowModal(false)} onSaved={fetchOrders} />
+        <CreateOrderModal order={selectedOrder || undefined} onClose={() => setShowModal(false)} onSaved={fetchOrders} />
+      )}
+
+      {viewOrder && (
+        <ViewOrderModal order={viewOrder} onClose={() => setViewOrder(null)} />
       )}
     </div>
   );
