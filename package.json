@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd frontend && npm install --production=false && npm run build",
+    "build": "cd frontend && npm install --production=false && npm run build && cd ../backend && npm install && npx prisma generate",
     "install-frontend": "cd frontend && npm install",
     "install-backend": "cd backend && npm install"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.2",
+    "prisma": "^5.10.2"
   }
 }
