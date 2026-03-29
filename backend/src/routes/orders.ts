@@ -52,6 +52,7 @@ router.post('/', async (req, res) => {
         status: OrderStatus.PENDING,
         items: {
           create: items.map((item: any) => ({
+            productId: item.productId,
             productName: item.productName,
             customization: item.customization,
             quantity: item.quantity || 1,
