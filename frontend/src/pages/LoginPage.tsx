@@ -18,7 +18,8 @@ export default function LoginPage({ onLogin }: { onLogin: (user: any) => void })
       onLogin(data.user);
       toast.success(`Bem-vindo, ${data.user.name}`);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'E-mail ou senha incorretos');
+      const msg = err.response?.data?.error || 'E-mail ou senha incorretos';
+      toast.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
     }
