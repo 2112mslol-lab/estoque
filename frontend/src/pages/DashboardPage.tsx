@@ -46,7 +46,7 @@ export default function DashboardPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Visão Geral</h1>
-          <p className="page-subtitle">Monitoramento em tempo real da Calixto Glass</p>
+          <p className="page-subtitle">Monitoramento em tempo real da Toque Ideal</p>
         </div>
       </div>
 

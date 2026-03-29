@@ -196,6 +196,21 @@ model Alert {
   @@map("alerts")
 }
 
+// ... (anteriores)
+
+// ==================== USUÁRIOS E SEGURANÇA ====================
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Hash da senha
+  role      String   @default("ADMIN") 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
 model StepConfig {
   id               String   @id @default(uuid())
   stepName         StepName @unique

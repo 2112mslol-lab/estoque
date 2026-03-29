@@ -1,4 +1,5 @@
 import { PrismaClient, StepName, UnitType } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -68,7 +69,19 @@ async function main() {
       await prisma.client.create({ data: client });
     }
   }
-  console.log('✅ Clientes criados');
+  // 5. Usuário Administrador Principal
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  await prisma.user.upsert({
+    where: { email: 'admin@toqueideal.com' },
+    update: {},
+    create: {
+      name: 'Administrador Toque Ideal',
+      email: 'admin@toqueideal.com',
+      password: adminPassword,
+      role: 'ADMIN',
+    },
+  });
+  console.log('✅ Usuário Administrador criado (admin@toqueideal.com / admin123)');
 
   console.log('🎉 Seed concluído com sucesso!');
 }

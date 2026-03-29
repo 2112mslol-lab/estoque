@@ -1,17 +1,16 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.error || 'Erro na requisição';
-    console.error('API Error:', message);
-    return Promise.reject(new Error(message));
+// Interceptor para adicionar o Token automaticamente em cada requisição
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
 export default api;

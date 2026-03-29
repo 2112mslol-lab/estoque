@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 
+import authRoutes from './routes/auth';
 import clientRoutes from './routes/clients';
 import orderRoutes from './routes/orders';
 import productRoutes from './routes/products';
@@ -46,6 +47,7 @@ app.get('/health', (_req, res) => {
 });
 
 // Rotas
+app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
