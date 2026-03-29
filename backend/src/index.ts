@@ -57,16 +57,18 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/configs', configRoutes);
 
-// WebSocket handlers
+// ...
 setupWebSocket(io);
 
-// Scheduler de alertas (roda a cada 5 minutos)
-startAlertScheduler();
+// Iniciar scheduler de alertas manual se necessário (pode não rodar em serverless gratuito, mas mantemos o código)
+checkAndCreateAlerts();
 
-const PORT = process.env.PORT || 3001;
-httpServer.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`🚀 Servidor rodando na rede local na porta ${PORT}`);
-  console.log(`📡 WebSocket ativo`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3001;
+  httpServer.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`🚀 Servidor local na porta ${PORT}`);
+  });
+}
 
 export { io };
+export default app;
