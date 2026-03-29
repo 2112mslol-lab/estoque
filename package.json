@@ -1,9 +1,9 @@
 {
-  "name": "calixto-glass",
+  "name": "toque-ideal",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install && npm run build && cp -R dist/* ../",
     "install-frontend": "cd frontend && npm install",
     "install-backend": "cd backend && npm install"
   }
