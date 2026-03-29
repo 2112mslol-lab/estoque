@@ -32,7 +32,13 @@ router.get('/', async (_req, res) => {
       },
       include: {
         client: { select: { name: true } },
-        productionSteps: { where: { status: { in: [StepStatus.IN_PROGRESS, StepStatus.PENDING] } } },
+        items: { 
+          include: { 
+            productionSteps: { 
+              where: { status: { in: [StepStatus.IN_PROGRESS, StepStatus.PENDING] } } 
+            } 
+          } 
+        },
       },
       orderBy: { deliveryDate: 'asc' },
     });
@@ -54,7 +60,11 @@ router.get('/', async (_req, res) => {
         startedAt: { not: null },
       },
       include: {
-        order: { include: { client: { select: { name: true } } } },
+        item: {
+          include: {
+            order: { include: { client: { select: { name: true } } } },
+          }
+        }
       },
     });
 
