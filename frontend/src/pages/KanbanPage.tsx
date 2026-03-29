@@ -122,7 +122,7 @@ function KanbanColumn({ stepName, steps, onUpdateStep }: {
       <div className="kanban-cards">
         <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
           {steps.map((step) => (
-            <KanbanCard key={step.id} step={step} />
+            <KanbanCard key={step.id} step={step} onUpdate={onUpdateStep} />
           ))}
         </SortableContext>
       </div>
