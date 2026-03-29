@@ -14,7 +14,7 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "backend/api/index.ts" },
-    { "source": "/((?!assets|.*\\..*).*)", "destination": "/frontend/dist/index.html" }
+    { "source": "/api/(.*)", "destination": "/backend/api/index.ts" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
