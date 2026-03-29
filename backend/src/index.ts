@@ -16,11 +16,40 @@ import configRoutes from './routes/configs';
 
 import { setupWebSocket } from './websocket/socket';
 import { checkAndCreateAlerts } from './services/alertScheduler';
+import bcrypt from 'bcryptjs';
+import prisma from './lib/prisma';
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Função para garantir que o administrador exista
+async function ensureAdminUser() {
+  try {
+    const adminEmail = 'admin@toqueideal.com';
+    const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+
+    if (!existingAdmin) {
+      console.log('👷 Criando usuário administrador inicial...');
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await prisma.user.create({
+        data: {
+          name: 'Administrador Toque Ideal',
+          email: adminEmail,
+          password: hashedPassword,
+          role: 'ADMIN'
+        }
+      });
+      console.log('✅ Administrador criado com sucesso!');
+    }
+  } catch (error) {
+    console.error('❌ Falha ao garantir admin:', error);
+  }
+}
+
+// Chamar a função
+ensureAdminUser();
 
 // WebSocket
 const io = new Server(httpServer, {
