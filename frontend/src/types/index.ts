@@ -4,6 +4,8 @@ export interface Client {
   email?: string;
   phone?: string;
   address?: string;
+  _count?: { orders: number };
+  createdAt?: string;
 }
 
 export type OrderStatus = 'PENDING' | 'IN_PRODUCTION' | 'FINISHED' | 'DELIVERED' | 'CANCELLED';
@@ -43,7 +45,7 @@ export type StepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
 export interface ProductionStep {
   id: string;
   orderItemId: string;
-  item: OrderItem;
+  item: OrderItem & { order: Order & { client: Client } };
   stepName: StepName;
   stepOrder: number;
   status: StepStatus;
@@ -54,10 +56,77 @@ export interface ProductionStep {
   notes?: string;
 }
 
+export type UnitType = 'KG' | 'LITERS' | 'UNITS' | 'METERS' | 'SHEETS';
+export type MovementType = 'ENTRY' | 'EXIT' | 'ADJUSTMENT';
+
 export interface StockMaterial {
   id: string;
   name: string;
-  unit: string;
+  unit: UnitType;
   currentStock: number;
   minimumStock: number;
 }
+
+export type AlertType = 'DEADLINE_APPROACHING' | 'STEP_DELAYED' | 'LOW_STOCK' | 'ORDER_DELAYED';
+export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+
+export interface Alert {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  orderId?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface DashboardData {
+  orders: {
+    total: number;
+    pending: number;
+    inProduction: number;
+    finished: number;
+    delivered: number;
+    cancelled: number;
+  };
+  delayedOrders: any[];
+  upcomingOrders: any[];
+  delayedSteps: any[];
+  stepCounts: any[];
+  avgTimeByStep: any[];
+  unreadAlerts: number;
+  lowStockCount?: number;
+}
+
+export const STEP_LABELS: Record<string, string> = {
+  CUTTING: 'Corte',
+  MOLDING: 'Modelagem',
+  COOLING: 'Resfriamento',
+  FINISHING: 'Acabamento',
+  PACKAGING: 'Embalagem',
+};
+
+export const STEP_COLORS: Record<string, string> = {
+  CUTTING: '#10b981',
+  MOLDING: '#f59e0b',
+  COOLING: '#3b82f6',
+  FINISHING: '#8b5cf6',
+  PACKAGING: '#64748b',
+};
+
+export const STEP_EMOJIS: Record<string, string> = {
+  CUTTING: '✂️',
+  MOLDING: '🔥',
+  COOLING: '❄️',
+  FINISHING: '✨',
+  PACKAGING: '📦',
+};
+
+export const UNIT_LABELS: Record<string, string> = {
+  KG: 'Quilos',
+  LITERS: 'Litros',
+  UNITS: 'Unidades',
+  METERS: 'Metros',
+  SHEETS: 'Chapas',
+};
