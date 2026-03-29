@@ -17,5 +17,8 @@
     { "src": "/api/(.*)", "dest": "backend/api/index.ts" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  "env": {
+    "PRISMA_GENERATE_DATAPROXY": "true"
+  }
 }
