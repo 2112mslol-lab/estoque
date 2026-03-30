@@ -60,9 +60,13 @@ router.post('/', async (req, res) => {
               create: [
                 { stepName: StepName.CUTTING,   stepOrder: 1, estimatedMinutes: stepConfigsMap[StepName.CUTTING] || 60 },
                 { stepName: StepName.MOLDING,   stepOrder: 2, estimatedMinutes: stepConfigsMap[StepName.MOLDING] || 120 },
-                { stepName: StepName.COOLING,   stepOrder: 3, estimatedMinutes: stepConfigsMap[StepName.COOLING] || 180 },
-                { stepName: StepName.FINISHING, stepOrder: 4, estimatedMinutes: stepConfigsMap[StepName.FINISHING] || 90 },
-                { stepName: StepName.PACKAGING, stepOrder: 5, estimatedMinutes: stepConfigsMap[StepName.PACKAGING] || 30 },
+                { stepName: StepName.PAINTING,  stepOrder: 3, estimatedMinutes: stepConfigsMap[StepName.PAINTING] || 90 },
+                { stepName: StepName.FINISHING, stepOrder: 4, estimatedMinutes: stepConfigsMap[StepName.FINISHING] || 45 },
+                { stepName: StepName.GLOSS,     stepOrder: 5, estimatedMinutes: stepConfigsMap[StepName.GLOSS] || 30 },
+                { stepName: StepName.CLEANING,  stepOrder: 6, estimatedMinutes: stepConfigsMap[StepName.CLEANING] || 30 },
+                { stepName: StepName.PACKAGING, stepOrder: 7, estimatedMinutes: stepConfigsMap[StepName.PACKAGING] || 30 },
+
+
               ]
             }
           }))

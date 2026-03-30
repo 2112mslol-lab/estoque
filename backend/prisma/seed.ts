@@ -10,10 +10,14 @@ async function main() {
   const stepConfigs = [
     { stepName: StepName.CUTTING,   estimatedMinutes: 60,  description: 'Corte do vidro' },
     { stepName: StepName.MOLDING,   estimatedMinutes: 120, description: 'Modelagem' },
-    { stepName: StepName.COOLING,   estimatedMinutes: 180, description: 'Resfriamento' },
-    { stepName: StepName.FINISHING, estimatedMinutes: 90,  description: 'Acabamento' },
+    { stepName: StepName.PAINTING,  estimatedMinutes: 90,  description: 'Pintura' },
+    { stepName: StepName.FINISHING, estimatedMinutes: 45,  description: 'Acabamento' },
+    { stepName: StepName.GLOSS,     estimatedMinutes: 30,  description: 'Brilho' },
+    { stepName: StepName.CLEANING,  estimatedMinutes: 30,  description: 'Limpeza' },
     { stepName: StepName.PACKAGING, estimatedMinutes: 30,  description: 'Embalagem' },
   ];
+
+
 
   for (const config of stepConfigs) {
     await prisma.stepConfig.upsert({

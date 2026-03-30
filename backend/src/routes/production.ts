@@ -8,26 +8,41 @@ const router = Router();
 // GET /api/production/kanban - Retornar etapas agrupadas por setor
 router.get('/kanban', async (_req, res) => {
   try {
-    // Buscar todas as etapas ativas (Pendente ou Em Progresso) vinculadas às PEÇAS (OrderItems)
-    const steps = await prisma.productionStep.findMany({
+    // Buscar todas as peças que possuem etapas pendentes ou em progresso
+    const orderItems = await prisma.orderItem.findMany({
       where: {
-        status: { in: [StepStatus.PENDING, StepStatus.IN_PROGRESS] },
+        status: { not: 'COMPLETED' },
       },
       include: {
-        item: {
-          include: {
-            order: {
-              include: { client: { select: { name: true } } },
-            },
-          },
+        productionSteps: {
+          orderBy: { stepOrder: 'asc' },
+        },
+        order: {
+          include: { client: { select: { name: true } } },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Mapear cada etapa para o formato esperado pelo Kanban
-    // Cada peça em um setor torna-se um 'card'
-    res.json(steps);
+    // Para cada peça, pegar apenas a PRIMEIRA etapa que não está concluída
+    const activeSteps: any[] = [];
+
+    for (const item of orderItems) {
+      const nextStep = item.productionSteps.find(s => s.status !== 'COMPLETED');
+      if (nextStep) {
+        // Formatar para o frontend (incluindo dados do item/pedido)
+        activeSteps.push({
+          ...nextStep,
+          item: {
+            ...item,
+            productionSteps: undefined, // remove para evitar circular
+          }
+        });
+      }
+    }
+
+    res.json(activeSteps);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro ao buscar dados do Kanban' });

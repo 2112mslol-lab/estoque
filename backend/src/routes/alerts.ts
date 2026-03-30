@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
       take: 50,
       include: {
         order: {
-          select: { orderNumber: true, product: true, client: { select: { name: true } } },
+          select: { orderNumber: true, client: { select: { name: true } } },
         },
       },
     });

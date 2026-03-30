@@ -89,10 +89,14 @@ model Product {
 enum StepName {
   CUTTING      // Corte
   MOLDING      // Modelagem
-  COOLING      // Resfriamento
+  PAINTING     // Pintura
   FINISHING    // Acabamento
+  GLOSS        // Brilho
+  CLEANING     // Limpeza
   PACKAGING    // Embalagem
 }
+
+
 
 enum StepStatus {
   PENDING

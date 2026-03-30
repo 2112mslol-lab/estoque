@@ -39,7 +39,7 @@ export interface Product {
   description?: string;
 }
 
-export type StepName = 'CUTTING' | 'MOLDING' | 'COOLING' | 'FINISHING' | 'PACKAGING';
+export type StepName = 'CUTTING' | 'MOLDING' | 'PAINTING' | 'FINISHING' | 'GLOSS' | 'CLEANING' | 'PACKAGING';
 export type StepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
 
 export interface ProductionStep {
@@ -102,24 +102,30 @@ export interface DashboardData {
 export const STEP_LABELS: Record<string, string> = {
   CUTTING: 'Corte',
   MOLDING: 'Modelagem',
-  COOLING: 'Resfriamento',
+  PAINTING: 'Pintura',
   FINISHING: 'Acabamento',
+  GLOSS: 'Brilho',
+  CLEANING: 'Limpeza',
   PACKAGING: 'Embalagem',
 };
 
 export const STEP_COLORS: Record<string, string> = {
   CUTTING: '#10b981',
   MOLDING: '#f59e0b',
-  COOLING: '#3b82f6',
+  PAINTING: '#3b82f6',
   FINISHING: '#8b5cf6',
+  GLOSS: '#f43f5e',
+  CLEANING: '#06b6d4',
   PACKAGING: '#64748b',
 };
 
 export const STEP_EMOJIS: Record<string, string> = {
   CUTTING: '✂️',
   MOLDING: '🔥',
-  COOLING: '❄️',
+  PAINTING: '🎨',
   FINISHING: '✨',
+  GLOSS: '💎',
+  CLEANING: '🧼',
   PACKAGING: '📦',
 };
 

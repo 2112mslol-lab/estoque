@@ -6,14 +6,18 @@ import { CSS } from '@dnd-kit/utilities';
 import { 
   Scissors, 
   Flame, 
-  Snowflake, 
   Sparkles, 
   Package, 
   Clock, 
   AlertTriangle,
   GripVertical,
-  RefreshCw
+  RefreshCw,
+  Droplets,
+  Hammer,
+  Paintbrush,
+  Snowflake
 } from 'lucide-react';
+
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -24,8 +28,10 @@ import api from '../services/api';
 const COLUMN_ICONS: Record<string, React.ReactNode> = {
   CUTTING: <Scissors size={18} />,
   MOLDING: <Flame size={18} />,
-  COOLING: <Snowflake size={18} />,
-  FINISHING: <Sparkles size={18} />,
+  PAINTING: <Paintbrush size={18} />,
+  FINISHING: <Hammer size={18} />,
+  GLOSS: <Sparkles size={18} />,
+  CLEANING: <Droplets size={18} />,
   PACKAGING: <Package size={18} />,
 };
 
@@ -164,7 +170,7 @@ export default function KanbanPage() {
     if (!over) return;
   };
 
-  const columns: StepName[] = ['CUTTING', 'MOLDING', 'COOLING', 'FINISHING', 'PACKAGING'];
+  const columns: StepName[] = ['CUTTING', 'MOLDING', 'PAINTING', 'FINISHING', 'GLOSS', 'CLEANING', 'PACKAGING'];
 
   return (
     <div>

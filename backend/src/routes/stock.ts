@@ -33,7 +33,7 @@ router.get('/materials/:id', async (req, res) => {
         stockMovements: {
           orderBy: { createdAt: 'desc' },
           take: 20,
-          include: { order: { select: { orderNumber: true } } },
+          include: { item: { include: { order: { select: { orderNumber: true } } } } },
         },
       },
     });
@@ -118,7 +118,7 @@ router.post('/movements', async (req, res) => {
 
     const [movement, updatedMaterial] = await prisma.$transaction([
       prisma.stockMovement.create({
-        data: { materialId, orderId, type, quantity: qty, reason },
+        data: { materialId, orderItemId: orderId, type, quantity: qty, reason },
       }),
       prisma.material.update({
         where: { id: materialId },
