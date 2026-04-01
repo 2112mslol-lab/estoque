@@ -131,8 +131,27 @@ router.get('/', async (_req, res) => {
       items: Object.entries(products).map(([name, qty]) => ({ name, qty }))
     }));
 
+    // Contagem agregada de peças por estágio (Resumo de Estoque de Produção)
+    const allItems = await prisma.orderItem.findMany({
+      where: { isPicked: false } as any,
+      select: { status: true, quantity: true }
+    });
+
+    const itemStock = {
+      pending: 0,
+      production: 0,
+      packaged: 0
+    };
+
+    (allItems as any).forEach((item: any) => {
+      if (item.status === 'PENDING') itemStock.pending += item.quantity;
+      else if (item.status === 'IN_PRODUCTION') itemStock.production += item.quantity;
+      else if (item.status === 'COMPLETED') itemStock.packaged += item.quantity;
+    });
+
     res.json({
       orders: { total, pending, inProduction, finished, delivered, cancelled },
+      itemStock,
       delayedOrders,
       upcomingOrders,
       delayedSteps,

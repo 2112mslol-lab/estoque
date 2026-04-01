@@ -30,6 +30,7 @@ export interface OrderItem {
   customization?: string;
   quantity: number;
   status: string;
+  isPicked: boolean;
   productionSteps: ProductionStep[];
 }
 
@@ -97,6 +98,15 @@ export interface DashboardData {
   avgTimeByStep: any[];
   unreadAlerts: number;
   lowStockCount?: number;
+  itemStock?: {
+    pending: number;
+    production: number;
+    packaged: number;
+  };
+  aggregatedQueue?: {
+    sector: string;
+    items: { name: string; qty: number }[];
+  }[];
 }
 
 export const STEP_LABELS: Record<string, string> = {

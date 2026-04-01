@@ -158,4 +158,46 @@ router.get('/low', async (_req, res) => {
   }
 });
 
+// GET /api/stock/items - Resumo de peças por status (Estoque de Produção)
+router.get('/items', async (_req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        orderItems: {
+          where: { isPicked: false }, // Apenas o que ainda não saiu para entrega/separação
+          select: {
+            status: true,
+            quantity: true,
+          }
+        }
+      }
+    });
+
+    const summary = products.map((p: any) => {
+      const counts = {
+        pending: 0,
+        production: 0,
+        packaged: 0
+      };
+
+      p.orderItems.forEach((item: any) => {
+        if (item.status === 'PENDING') counts.pending += item.quantity;
+        else if (item.status === 'IN_PRODUCTION') counts.production += item.quantity;
+        else if (item.status === 'COMPLETED') counts.packaged += item.quantity;
+      });
+
+      return {
+        id: p.id,
+        name: p.name,
+        ...counts
+      };
+    });
+
+    res.json(summary.filter(s => (s.pending + s.production + s.packaged) > 0));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao buscar resumo de itens' });
+  }
+});
+
 export default router;

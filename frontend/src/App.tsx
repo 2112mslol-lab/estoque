@@ -9,7 +9,9 @@ import {
   Package, 
   Bell, 
   Users,
-  LogOut
+  LogOut,
+  Archive,
+  CheckSquare
 } from 'lucide-react';
 import { useSocket } from './hooks/useSocket';
 
@@ -20,6 +22,8 @@ import ProductsPage from './pages/ProductsPage';
 import AlertsPage from './pages/AlertsPage';
 import ClientsPage from './pages/ClientsPage';
 import LoginPage from './pages/LoginPage';
+import StockItemsPage from './pages/StockItemsPage';
+import OrderControlPage from './pages/OrderControlPage';
 
 function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () => void }) {
   const userString = localStorage.getItem('user');
@@ -43,11 +47,19 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
         </NavLink>
         <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           <ClipboardList size={20} />
-          <span>Pedidos</span>
+          <span>Entradas</span>
+        </NavLink>
+        <NavLink to="/order-control" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          <CheckSquare size={20} />
+          <span>Expedição</span>
+        </NavLink>
+        <NavLink to="/stock-items" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          <Archive size={20} />
+          <span>Estoque</span>
         </NavLink>
         <NavLink to="/products" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           <Package size={20} />
-          <span>Produtos</span>
+          <span>Catálogo</span>
         </NavLink>
         <NavLink to="/clients" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           <Users size={20} />
@@ -61,6 +73,7 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
           <span>Alertas</span>
         </NavLink>
       </nav>
+      {/* ... rest of sidebar code ... */}
 
       <div style={{ padding: '20px 0', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ padding: '0 20px', marginBottom: 10 }}>
@@ -134,6 +147,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/order-control" element={<OrderControlPage />} />
+            <Route path="/stock-items" element={<StockItemsPage />} />
             <Route path="/kanban" element={<KanbanPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />

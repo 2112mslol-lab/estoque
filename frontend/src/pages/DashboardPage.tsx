@@ -137,6 +137,39 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {data.itemStock && (
+        <div className="card mb-6 shadow-premium" style={{ borderTop: '4px solid var(--color-primary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Zap size={20} style={{ color: 'var(--color-primary)' }} />
+              <h3 style={{ fontSize: 16, fontWeight: 700 }}>Estoque de Produção (Qtd. de Peças)</h3>
+            </div>
+            <a href="/stock-items" style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none' }}>Ver Detalhado →</a>
+          </div>
+          
+          <div className="grid-3 gap-4">
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-warning)', fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                🕒 Pendente
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>{data.itemStock.pending}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                ⚙️ Em Produção
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>{data.itemStock.production}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-success)', fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                📦 Embalado
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>{data.itemStock.packaged}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <div className="flex items-center gap-2 mb-6">
           <ClipboardList size={20} style={{ color: 'var(--color-primary)' }} />

@@ -61,6 +61,7 @@ model OrderItem {
   customization   String?     
   quantity        Int         @default(1)
   status          String      @default("PENDING")
+  isPicked        Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

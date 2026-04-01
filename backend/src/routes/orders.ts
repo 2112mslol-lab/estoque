@@ -138,4 +138,41 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// PUT /api/orders/items/:id/pick - Marcar item como separado/coletado
+router.put('/items/:id/pick', async (req, res) => {
+  const { id } = req.params;
+  const { isPicked } = req.body;
+
+  try {
+    const item = await prisma.orderItem.update({
+      where: { id },
+      data: { isPicked } as any,
+      include: { 
+        order: { 
+          include: { 
+            items: true,
+            client: true
+          } 
+        } 
+      }
+    }) as any;
+
+    // Se todos os itens do pedido estiverem separados, marcar o pedido como FINISHED
+    const allPicked = item.order.items.every((i: any) => i.isPicked);
+    if (allPicked && item.order.status !== OrderStatus.FINISHED && item.order.status !== OrderStatus.DELIVERED && item.order.status !== OrderStatus.CANCELLED) {
+      await prisma.order.update({
+        where: { id: item.orderId },
+        data: { status: OrderStatus.FINISHED }
+      });
+      io.emit('order:updated', { ...item.order, status: OrderStatus.FINISHED });
+    }
+
+    io.emit('order:item-picked', item);
+    res.json(item);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao atualizar status de separação' });
+  }
+});
+
 export default router;
