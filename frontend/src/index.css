@@ -148,6 +148,30 @@ h1, h2, h3, .logo-text {
   color: var(--color-text-1);
 }
 
+.nav-link-sub {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  color: var(--color-text-3);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nav-link-sub:hover {
+  color: var(--color-text-1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.nav-link-sub.active {
+  color: var(--color-primary);
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+
 .nav-link.active {
   background: var(--color-primary);
   color: white;

@@ -24,8 +24,12 @@ import ClientsPage from './pages/ClientsPage';
 import LoginPage from './pages/LoginPage';
 import StockItemsPage from './pages/StockItemsPage';
 import OrderControlPage from './pages/OrderControlPage';
+import ProductionSectorPage from './pages/ProductionSectorPage';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+
 
 function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () => void }) {
+  const [showProduction, setShowProduction] = useState(true);
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
 
@@ -36,10 +40,48 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
         <div className="logo-text">Toque Ideal</div>
       </div>
 
-      <nav style={{ flex: 1 }}>
+      <nav style={{ flex: 1, overflowY: 'auto' }}>
+        <button 
+          onClick={() => setShowProduction(!showProduction)} 
+          className="nav-link" 
+          style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', justifyContent: 'space-between' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Zap size={20} />
+            <span>Fábrica</span>
+          </div>
+          {showProduction ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
+
+        {showProduction && (
+          <div style={{ marginLeft: 32, display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
+            <NavLink to="/production/cutting" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>1. Corte</span>
+            </NavLink>
+            <NavLink to="/production/molding" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>2. Molde / Forno</span>
+            </NavLink>
+            <NavLink to="/production/painting" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>3. Pintura</span>
+            </NavLink>
+            <NavLink to="/production/finishing" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>4. Acabamento</span>
+            </NavLink>
+            <NavLink to="/production/gloss" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>5. Brilho</span>
+            </NavLink>
+            <NavLink to="/production/cleaning" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>6. Limpeza</span>
+            </NavLink>
+            <NavLink to="/production/packaging" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+              <span>7. Embalagem</span>
+            </NavLink>
+          </div>
+        )}
+
         <NavLink to="/kanban" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <Zap size={20} />
-          <span>Produção</span>
+          <Package size={20} />
+          <span>Fila Global</span>
         </NavLink>
         <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
           <LayoutDashboard size={20} />
@@ -73,6 +115,7 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
           <span>Alertas</span>
         </NavLink>
       </nav>
+
       {/* ... rest of sidebar code ... */}
 
       <div style={{ padding: '20px 0', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -157,6 +200,19 @@ function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () 
                 <Users size={20} />
                 <span>Clientes</span>
               </NavLink>
+
+              <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 8, paddingLeft: 12 }}>SETORES DA FÁBRICA</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <NavLink to="/production/cutting" className="nav-link-sub" onClick={() => setShowMore(false)}>Corte</NavLink>
+                    <NavLink to="/production/molding" className="nav-link-sub" onClick={() => setShowMore(false)}>Molde</NavLink>
+                    <NavLink to="/production/painting" className="nav-link-sub" onClick={() => setShowMore(false)}>Pintura</NavLink>
+                    <NavLink to="/production/finishing" className="nav-link-sub" onClick={() => setShowMore(false)}>Acabam.</NavLink>
+                    <NavLink to="/production/gloss" className="nav-link-sub" onClick={() => setShowMore(false)}>Brilho</NavLink>
+                    <NavLink to="/production/cleaning" className="nav-link-sub" onClick={() => setShowMore(false)}>Limpeza</NavLink>
+                    <NavLink to="/production/packaging" className="nav-link-sub" onClick={() => setShowMore(false)}>Embal.</NavLink>
+                </div>
+              </div>
               
               <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
                 <button className="nav-link" onClick={() => { onLogout(); setShowMore(false); }} style={{ border: 'none', background: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--color-danger)' }}>
@@ -164,6 +220,7 @@ function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () 
                   <span>Sair do Sistema</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -236,6 +293,7 @@ export default function App() {
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/production/:sector" element={<ProductionSectorPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
