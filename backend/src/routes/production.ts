@@ -2,8 +2,12 @@ import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { io } from '../index';
 import { StepStatus } from '@prisma/client';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+
 
 // GET /api/production/kanban - Retornar etapas agrupadas por setor
 router.get('/kanban', async (_req, res) => {

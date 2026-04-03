@@ -2,8 +2,13 @@ import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { io } from '../index';
 import { OrderStatus, StepName, StepStatus } from '@prisma/client';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+// Aplicar autenticação em todas as rotas de pedidos
+router.use(authenticate);
+
 
 // GET /api/orders - Listar todos os pedidos com detalhes
 router.get('/', async (_req, res) => {
@@ -26,8 +31,8 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// POST /api/orders - Criar um novo pedido com MÚLTIPLOS ITENS
-router.post('/', async (req, res) => {
+// POST /api/orders - Criar um novo pedido com MÚLTIPLOS ITENS (APENAS ADMIN)
+router.post('/', authorize(['ADMIN']), async (req, res) => {
   try {
     const { clientId, deliveryDate, notes, items } = req.body;
 
@@ -107,8 +112,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT /api/orders/:id - Atualizar pedido
-router.put('/:id', async (req, res) => {
+// PUT /api/orders/:id - Atualizar pedido (APENAS ADMIN)
+router.put('/:id', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   const { deliveryDate, notes, status } = req.body;
   try {
@@ -127,8 +132,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/orders/:id - Excluir pedido
-router.delete('/:id', async (req, res) => {
+// DELETE /api/orders/:id - Excluir pedido (APENAS ADMIN)
+router.delete('/:id', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   try {
     await prisma.order.delete({ where: { id } });
@@ -138,8 +143,8 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// PUT /api/orders/items/:id/pick - Marcar item como separado/coletado
-router.put('/items/:id/pick', async (req, res) => {
+// PUT /api/orders/items/:id/pick - Marcar item como separado/coletado (APENAS ADMIN)
+router.put('/items/:id/pick', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   const { isPicked } = req.body;
 

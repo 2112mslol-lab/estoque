@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { StepStatus } from '@prisma/client';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+
 
 // GET /api/dashboard - Dados gerais do dashboard
 router.get('/', async (_req, res) => {

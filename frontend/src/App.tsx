@@ -86,26 +86,30 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
           <LayoutDashboard size={20} />
           <span>Visão Geral</span>
         </NavLink>
-        <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <ClipboardList size={20} />
-          <span>Entradas</span>
-        </NavLink>
-        <NavLink to="/order-control" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <CheckSquare size={20} />
-          <span>Expedição</span>
-        </NavLink>
-        <NavLink to="/stock-items" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <Archive size={20} />
-          <span>Estoque</span>
-        </NavLink>
-        <NavLink to="/products" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <Package size={20} />
-          <span>Catálogo</span>
-        </NavLink>
-        <NavLink to="/clients" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <Users size={20} />
-          <span>Clientes</span>
-        </NavLink>
+        {user?.role === 'ADMIN' && (
+          <>
+            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <ClipboardList size={20} />
+              <span>Entradas</span>
+            </NavLink>
+            <NavLink to="/order-control" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <CheckSquare size={20} />
+              <span>Expedição</span>
+            </NavLink>
+            <NavLink to="/stock-items" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Archive size={20} />
+              <span>Estoque</span>
+            </NavLink>
+            <NavLink to="/products" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Package size={20} />
+              <span>Catálogo</span>
+            </NavLink>
+            <NavLink to="/clients" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Users size={20} />
+              <span>Clientes</span>
+            </NavLink>
+          </>
+        )}
         <NavLink to="/alerts" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           <div style={{ position: 'relative', display: 'flex' }}>
             <Bell size={20} />
@@ -148,14 +152,18 @@ function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () 
             <LayoutDashboard size={22} />
             <span>Início</span>
           </NavLink>
-          <NavLink to="/orders" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
-            <ClipboardList size={22} />
-            <span>Entradas</span>
-          </NavLink>
-          <NavLink to="/order-control" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
-            <CheckSquare size={22} />
-            <span>Expedição</span>
-          </NavLink>
+          {user?.role === 'ADMIN' && (
+            <>
+              <NavLink to="/orders" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+                <ClipboardList size={22} />
+                <span>Entradas</span>
+              </NavLink>
+              <NavLink to="/order-control" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+                <CheckSquare size={22} />
+                <span>Expedição</span>
+              </NavLink>
+            </>
+          )}
           <button 
             className="mobile-nav-link" 
             onClick={() => setShowMore(true)}
@@ -187,18 +195,24 @@ function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () 
                 <Bell size={20} />
                 <span>Alertas ({alertCount})</span>
               </NavLink>
-              <NavLink to="/stock-items" className="nav-link" onClick={() => setShowMore(false)}>
-                <Archive size={20} />
-                <span>Estoque</span>
-              </NavLink>
-              <NavLink to="/products" className="nav-link" onClick={() => setShowMore(false)}>
-                <Package size={20} />
-                <span>Catálogo</span>
-              </NavLink>
-              <NavLink to="/clients" className="nav-link" onClick={() => setShowMore(false)}>
-                <Users size={20} />
-                <span>Clientes</span>
-              </NavLink>
+              {user?.role === 'ADMIN' && (
+                <NavLink to="/stock-items" className="nav-link" onClick={() => setShowMore(false)}>
+                  <Archive size={20} />
+                  <span>Estoque</span>
+                </NavLink>
+              )}
+              {user?.role === 'ADMIN' && (
+                <>
+                  <NavLink to="/products" className="nav-link" onClick={() => setShowMore(false)}>
+                    <Package size={20} />
+                    <span>Catálogo</span>
+                  </NavLink>
+                  <NavLink to="/clients" className="nav-link" onClick={() => setShowMore(false)}>
+                    <Users size={20} />
+                    <span>Clientes</span>
+                  </NavLink>
+                </>
+              )}
 
               <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
                 <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 8, paddingLeft: 12 }}>SETORES DA FÁBRICA</div>
@@ -285,13 +299,13 @@ export default function App() {
         <main className="main-content">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/order-control" element={<OrderControlPage />} />
-            <Route path="/stock-items" element={<StockItemsPage />} />
+            <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
+            <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
+            <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
             <Route path="/kanban" element={<KanbanPage />} />
-            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
             <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
-            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
             <Route path="/production/:sector" element={<ProductionSectorPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

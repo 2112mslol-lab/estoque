@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { StepName } from '@prisma/client';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+router.use(authorize(['ADMIN']));
+
 
 // GET /api/configs/steps - Configurações das etapas
 router.get('/steps', async (_req, res) => {

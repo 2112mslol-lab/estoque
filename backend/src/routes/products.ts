@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+
 
 // GET /api/products - Listar modelos
 router.get('/', async (_req, res) => {
@@ -15,8 +19,8 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// POST /api/products - Cadastrar novo modelo
-router.post('/', async (req, res) => {
+// POST /api/products - Cadastrar novo modelo (APENAS ADMIN)
+router.post('/', authorize(['ADMIN']), async (req, res) => {
   const { name, description } = req.body;
   try {
     const product = await prisma.product.create({
@@ -28,8 +32,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// DELETE /api/products/:id - Remover modelo
-router.delete('/:id', async (req, res) => {
+// DELETE /api/products/:id - Remover modelo (APENAS ADMIN)
+router.delete('/:id', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   try {
     await prisma.product.delete({ where: { id } });

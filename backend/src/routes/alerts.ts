@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+
 
 // GET /api/alerts
 router.get('/', async (req, res) => {
@@ -36,8 +40,8 @@ router.get('/count', async (_req, res) => {
   }
 });
 
-// PUT /api/alerts/:id/read - Marcar como lido
-router.put('/:id/read', async (req, res) => {
+// PUT /api/alerts/:id/read - Marcar como lido (APENAS ADMIN)
+router.put('/:id/read', authorize(['ADMIN']), async (req, res) => {
   try {
     const alert = await prisma.alert.update({
       where: { id: req.params.id },
@@ -49,8 +53,8 @@ router.put('/:id/read', async (req, res) => {
   }
 });
 
-// PUT /api/alerts/read-all - Marcar todos como lidos
-router.put('/read-all', async (_req, res) => {
+// PUT /api/alerts/read-all - Marcar todos como lidos (APENAS ADMIN)
+router.put('/read-all', authorize(['ADMIN']), async (_req, res) => {
   try {
     await prisma.alert.updateMany({
       where: { isRead: false },
@@ -62,8 +66,8 @@ router.put('/read-all', async (_req, res) => {
   }
 });
 
-// DELETE /api/alerts/:id
-router.delete('/:id', async (req, res) => {
+// DELETE /api/alerts/:id (APENAS ADMIN)
+router.delete('/:id', authorize(['ADMIN']), async (req, res) => {
   try {
     await prisma.alert.delete({ where: { id: req.params.id } });
     res.json({ message: 'Alerta removido' });

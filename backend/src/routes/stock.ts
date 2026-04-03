@@ -2,8 +2,12 @@ import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { MovementType } from '@prisma/client';
 import { emitEvent } from '../websocket/socket';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+
 
 // GET /api/stock/materials
 router.get('/materials', async (_req, res) => {
@@ -44,8 +48,8 @@ router.get('/materials/:id', async (req, res) => {
   }
 });
 
-// POST /api/stock/materials
-router.post('/materials', async (req, res) => {
+// POST /api/stock/materials (APENAS ADMIN)
+router.post('/materials', authorize(['ADMIN']), async (req, res) => {
   try {
     const { name, description, unit, currentStock, minimumStock, costPerUnit, supplier } = req.body;
     if (!name || !unit) return res.status(400).json({ error: 'Nome e unidade são obrigatórios' });
@@ -69,8 +73,8 @@ router.post('/materials', async (req, res) => {
   }
 });
 
-// PUT /api/stock/materials/:id
-router.put('/materials/:id', async (req, res) => {
+// PUT /api/stock/materials/:id (APENAS ADMIN)
+router.put('/materials/:id', authorize(['ADMIN']), async (req, res) => {
   try {
     const { name, description, unit, minimumStock, costPerUnit, supplier } = req.body;
 
@@ -93,8 +97,8 @@ router.put('/materials/:id', async (req, res) => {
   }
 });
 
-// POST /api/stock/movements - Registrar movimentação
-router.post('/movements', async (req, res) => {
+// POST /api/stock/movements - Registrar movimentação (APENAS ADMIN)
+router.post('/movements', authorize(['ADMIN']), async (req, res) => {
   try {
     const { materialId, orderId, type, quantity, reason } = req.body;
     if (!materialId || !type || !quantity) {

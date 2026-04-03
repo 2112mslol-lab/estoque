@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate);
+
 
 // GET /api/clients
 router.get('/', async (_req, res) => {
@@ -35,8 +39,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/clients
-router.post('/', async (req, res) => {
+// POST /api/clients (APENAS ADMIN)
+router.post('/', authorize(['ADMIN']), async (req, res) => {
   try {
     const { name, email, phone, address } = req.body;
     if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
@@ -50,8 +54,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/clients/:id
-router.put('/:id', async (req, res) => {
+// PUT /api/clients/:id (APENAS ADMIN)
+router.put('/:id', authorize(['ADMIN']), async (req, res) => {
   try {
     const { name, email, phone, address } = req.body;
     const client = await prisma.client.update({
@@ -64,8 +68,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/clients/:id
-router.delete('/:id', async (req, res) => {
+// DELETE /api/clients/:id (APENAS ADMIN)
+router.delete('/:id', authorize(['ADMIN']), async (req, res) => {
   try {
     await prisma.client.delete({ where: { id: req.params.id } });
     res.json({ message: 'Cliente removido com sucesso' });
