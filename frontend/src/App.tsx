@@ -36,8 +36,7 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
   return (
     <aside className="sidebar">
       <div className="logo-container">
-        <div className="logo-icon">✨</div>
-        <div className="logo-text">Toque Ideal</div>
+        <img src="/logo.png" alt="Toque Ideal" style={{ height: 40, width: 'auto', marginRight: 12 }} />
       </div>
 
       <nav style={{ flex: 1, overflowY: 'auto' }}>

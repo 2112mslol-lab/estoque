@@ -35,20 +35,16 @@ export default function LoginPage({ onLogin }: { onLogin: (user: any) => void })
     }}>
       <div className="card" style={{ width: '100%', maxWidth: 400, padding: 32 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ 
-            width: 64, 
-            height: 64, 
-            background: 'var(--color-primary-glow)', 
-            borderRadius: 16, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            color: 'var(--color-primary)'
-          }}>
-            <Sparkles size={32} />
-          </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800 }}>Toque Ideal</h1>
+          <img 
+            src="/logo.png" 
+            alt="Toque Ideal" 
+            style={{ 
+              maxWidth: 200, 
+              height: 'auto', 
+              margin: '0 auto 16px',
+              display: 'block'
+            }} 
+          />
           <p style={{ color: 'var(--color-text-3)', fontSize: 14 }}>Acesse o controle de produção</p>
         </div>
 
