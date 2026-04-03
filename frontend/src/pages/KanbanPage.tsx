@@ -22,7 +22,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { ProductionStep, StepName, StepStatus } from '../types';
-import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS } from '../types';
+import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS, STEP_STATUS_LABELS } from '../types';
 import api from '../services/api';
 
 const COLUMN_ICONS: Record<string, React.ReactNode> = {
@@ -104,7 +104,7 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
         </div>
         <div style={{ textAlign: 'right' }}>
            <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4, display: 'block', color: isDelayed ? 'var(--color-danger)' : 'inherit' }}>
-            {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : 'Aguardando'}
+            {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : STEP_STATUS_LABELS[step.status]}
           </span>
           <span style={{ fontSize: 9, color: 'var(--color-text-3)' }}>
             Meta: {step.estimatedMinutes}m

@@ -148,3 +148,31 @@ export const UNIT_LABELS: Record<string, string> = {
   METERS: 'Metros',
   SHEETS: 'Chapas',
 };
+
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pendente',
+  IN_PRODUCTION: 'Em Produção',
+  FINISHED: 'Finalizado',
+  DELIVERED: 'Entregue',
+  CANCELLED: 'Cancelado',
+};
+
+export const STEP_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Aguardando',
+  IN_PROGRESS: 'Em Execução',
+  COMPLETED: 'Concluído',
+  BLOCKED: 'Bloqueado',
+};
+
+export const ALERT_TYPE_LABELS: Record<string, string> = {
+  DEADLINE_APPROACHING: 'Prazo Próximo',
+  STEP_DELAYED: 'Etapa Atrasada',
+  LOW_STOCK: 'Estoque Baixo',
+  ORDER_DELAYED: 'Pedido Atrasado',
+};
+
+export const ALERT_SEVERITY_LABELS: Record<string, string> = {
+  INFO: 'Informação',
+  WARNING: 'Aviso',
+  CRITICAL: 'Crítico',
+};

@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { Order, Client, Product } from '../types';
+import { ORDER_STATUS_LABELS } from '../types';
 import api from '../services/api';
 
 interface OrderItemForm {
@@ -231,7 +232,9 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
                 <div key={idx} style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontWeight: 700 }}>{item.quantity}x {item.productName}</span>
-                    <span style={{ fontSize: 11, background: 'var(--color-primary-light)', padding: '2px 6px', borderRadius: 4 }}>{item.status}</span>
+                    <span style={{ fontSize: 11, background: 'var(--color-primary-light)', padding: '2px 6px', borderRadius: 4 }}>
+                      {ORDER_STATUS_LABELS[item.status] || item.status}
+                    </span>
                   </div>
                   {item.customization && <div style={{ fontSize: 12, color: 'var(--color-text-2)', fontStyle: 'italic' }}>Obs: {item.customization}</div>}
                 </div>
@@ -350,7 +353,7 @@ export default function OrdersPage() {
                     fontWeight: 800,
                     color: order.status === 'PENDING' ? 'var(--color-warning)' : 'var(--color-success)'
                   }}>
-                    {order.status}
+                    {ORDER_STATUS_LABELS[order.status] || order.status}
                   </span>
                 </td>
                 <td style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{order.orderNumber}</td>

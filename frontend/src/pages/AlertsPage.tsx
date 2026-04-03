@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useSocket } from '../hooks/useSocket';
 import type { Alert, AlertType, AlertSeverity } from '../types';
+import { STEP_LABELS } from '../types';
 
 export default function AlertsPage({ onMarkRead }: { onMarkRead?: () => void }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -70,8 +71,12 @@ export default function AlertsPage({ onMarkRead }: { onMarkRead?: () => void }) 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {getAlertIcon(alert.type, alert.severity)}
               <div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{alert.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>{alert.message}</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>
+                  {Object.entries(STEP_LABELS).reduce((acc, [key, label]) => acc.replace(key, label), alert.title)}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>
+                  {Object.entries(STEP_LABELS).reduce((acc, [key, label]) => acc.replace(key, label), alert.message)}
+                </div>
                 <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>
                   {format(new Date(alert.createdAt), "dd/MM 'às' HH:mm", { locale: ptBR })}
                 </div>

@@ -2,6 +2,16 @@ import prisma from '../lib/prisma';
 import { io } from '../index';
 import { AlertType, AlertSeverity, StepStatus } from '@prisma/client';
 
+const STEP_LABELS: Record<string, string> = {
+  CUTTING: 'Corte',
+  MOLDING: 'Molde / Forno',
+  PAINTING: 'Pintura',
+  FINISHING: 'Acabamento',
+  GLOSS: 'Brilho',
+  CLEANING: 'Limpeza',
+  PACKAGING: 'Embalagem',
+};
+
 export async function checkAndCreateAlerts() {
   console.log('🔍 Executando verificador de alertas (Setores e Peças)...');
   
@@ -56,15 +66,16 @@ export async function checkAndCreateAlerts() {
       const elapsedMinutes = (now.getTime() - step.startedAt.getTime()) / 1000 / 60;
       if (elapsedMinutes > step.estimatedMinutes) {
         // Criar alerta de setor atrasado
-        const title = `Setor Atrasado: ${step.stepName}`;
-        const message = `A peça "${step.item.productName}" (Pedido ${step.item.order.orderNumber}) está no setor de ${step.stepName} há ${Math.round(elapsedMinutes)} min (Máx: ${step.estimatedMinutes}min).`;
+        const label = STEP_LABELS[step.stepName] || step.stepName;
+        const title = `Setor Atrasado: ${label}`;
+        const message = `A peça "${step.item.productName}" (Pedido ${step.item.order.orderNumber}) está no setor de ${label} há ${Math.round(elapsedMinutes)} min (Máx: ${step.estimatedMinutes}min).`;
         
         // Evitar duplicidade de alerta para a mesma etapa
         const existingAlert = await prisma.alert.findFirst({
           where: { 
             orderId: step.item.orderId,
             type: AlertType.STEP_DELAYED,
-            message: { contains: step.stepName }
+            message: { contains: label }
           }
         });
 
@@ -79,7 +90,7 @@ export async function checkAndCreateAlerts() {
             }
           });
           io.emit('alert:new', alert);
-          console.log(`⚠️ Alerta: Gargalo no setor ${step.stepName} - Peça: ${step.item.productName}`);
+          console.log(`⚠️ Alerta: Gargalo no setor ${label} - Peça: ${step.item.productName}`);
         }
       }
     }
