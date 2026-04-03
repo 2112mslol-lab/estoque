@@ -24,9 +24,10 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// Função para garantir que o administrador exista
-async function ensureAdminUser() {
+// Funções para garantir que os usuários iniciais existam
+async function ensureInitialUsers() {
   try {
+    // 1. Administrador Inicial
     const adminEmail = 'admin@toqueideal.com';
     const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
 
@@ -43,13 +44,32 @@ async function ensureAdminUser() {
       });
       console.log('✅ Administrador criado com sucesso!');
     }
+
+    // 2. Colaborador Inicial (Funcionário)
+    const employeeEmail = 'funcionario@toqueideal.com';
+    const existingEmployee = await prisma.user.findUnique({ where: { email: employeeEmail } });
+
+    if (!existingEmployee) {
+      console.log('👷 Criando usuário funcionário inicial...');
+      const hashedPassword = await bcrypt.hash('funcionario123', 10);
+      await prisma.user.create({
+        data: {
+          name: 'Colaborador Toque Ideal',
+          email: employeeEmail,
+          password: hashedPassword,
+          role: 'EMPLOYEE'
+        }
+      });
+      console.log('✅ Funcionário criado com sucesso!');
+    }
   } catch (error) {
-    console.error('❌ Falha ao garantir admin:', error);
+    console.error('❌ Falha ao garantir usuários iniciais:', error);
   }
 }
 
 // Chamar a função
-ensureAdminUser();
+ensureInitialUsers();
+
 
 // WebSocket
 const io = new Server(httpServer, {
