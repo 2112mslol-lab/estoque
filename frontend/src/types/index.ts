@@ -19,6 +19,7 @@ export interface Order {
   notes?: string;
   status: OrderStatus;
   items: OrderItem[];
+  alerts?: Alert[];
   createdAt: string;
 }
 
@@ -111,7 +112,7 @@ export interface DashboardData {
 
 export const STEP_LABELS: Record<string, string> = {
   CUTTING: 'Corte',
-  MOLDING: 'Modelagem',
+  MOLDING: 'Molde / Forno',
   PAINTING: 'Pintura',
   FINISHING: 'Acabamento',
   GLOSS: 'Brilho',
@@ -138,6 +139,7 @@ export const STEP_EMOJIS: Record<string, string> = {
   CLEANING: '🧼',
   PACKAGING: '📦',
 };
+
 
 export const UNIT_LABELS: Record<string, string> = {
   KG: 'Quilos',

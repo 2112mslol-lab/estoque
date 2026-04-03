@@ -39,7 +39,7 @@ export default function StockPage() {
         </div>
       </div>
 
-      <div className="grid-stats" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+      <div className="grid-stats">
         {loading ? <p>Carregando estoque...</p> : materials.map(mat => (
           <div key={mat.id} className="card" style={{ borderLeft: `4px solid ${Number(mat.currentStock) <= Number(mat.minimumStock) ? 'var(--color-danger)' : 'var(--color-success)'}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>

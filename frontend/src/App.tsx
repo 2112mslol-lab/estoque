@@ -89,6 +89,89 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
   );
 }
 
+function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () => void }) {
+  const [showMore, setShowMore] = useState(false);
+  const userString = localStorage.getItem('user');
+  const user = userString ? JSON.parse(userString) : null;
+
+  return (
+    <>
+      <nav className="mobile-nav">
+        <div className="mobile-nav-content">
+          <NavLink to="/kanban" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <Zap size={22} />
+            <span>Produção</span>
+          </NavLink>
+          <NavLink to="/" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} end>
+            <LayoutDashboard size={22} />
+            <span>Início</span>
+          </NavLink>
+          <NavLink to="/orders" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <ClipboardList size={22} />
+            <span>Entradas</span>
+          </NavLink>
+          <NavLink to="/order-control" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <CheckSquare size={22} />
+            <span>Expedição</span>
+          </NavLink>
+          <button 
+            className="mobile-nav-link" 
+            onClick={() => setShowMore(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <Bell size={22} />
+              {alertCount > 0 && <span className="alert-badge-count">{alertCount}</span>}
+            </div>
+            <span>Menu</span>
+          </button>
+        </div>
+      </nav>
+
+      {showMore && (
+        <div className="modal-overlay" onClick={() => setShowMore(false)}>
+          <div className="modal" style={{ marginBottom: 80, maxWidth: 320 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Menu</h2>
+              <button className="btn btn-ghost" onClick={() => setShowMore(false)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
+              <div style={{ padding: '8px 12px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', textTransform: 'uppercase' }}>Operador:</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)' }}>{user?.name || 'Administrador'}</div>
+              </div>
+
+              <NavLink to="/alerts" className="nav-link" onClick={() => setShowMore(false)}>
+                <Bell size={20} />
+                <span>Alertas ({alertCount})</span>
+              </NavLink>
+              <NavLink to="/stock-items" className="nav-link" onClick={() => setShowMore(false)}>
+                <Archive size={20} />
+                <span>Estoque</span>
+              </NavLink>
+              <NavLink to="/products" className="nav-link" onClick={() => setShowMore(false)}>
+                <Package size={20} />
+                <span>Catálogo</span>
+              </NavLink>
+              <NavLink to="/clients" className="nav-link" onClick={() => setShowMore(false)}>
+                <Users size={20} />
+                <span>Clientes</span>
+              </NavLink>
+              
+              <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
+                <button className="nav-link" onClick={() => { onLogout(); setShowMore(false); }} style={{ border: 'none', background: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--color-danger)' }}>
+                  <LogOut size={20} />
+                  <span>Sair do Sistema</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -157,6 +240,8 @@ export default function App() {
           </Routes>
         </main>
 
+        <MobileNav alertCount={alertCount} onLogout={handleLogout} />
+
         <Toaster 
           position="top-right"
           toastOptions={{
@@ -172,3 +257,5 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
+

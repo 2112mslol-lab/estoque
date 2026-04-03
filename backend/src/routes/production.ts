@@ -18,10 +18,17 @@ router.get('/kanban', async (_req, res) => {
           orderBy: { stepOrder: 'asc' },
         },
         order: {
-          include: { client: { select: { name: true } } },
+          include: { 
+            client: { select: { name: true } },
+            alerts: { where: { type: 'DEADLINE_APPROACHING' } }
+          },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { 
+        order: { 
+          deliveryDate: 'asc' 
+        } 
+      },
     });
 
     // Para cada peça, pegar apenas a PRIMEIRA etapa que não está concluída

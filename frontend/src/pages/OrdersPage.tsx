@@ -98,7 +98,7 @@ function CreateOrderModal({ order, onClose, onSaved }: {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" style={{ maxWidth: 840 }} onClick={e => e.stopPropagation()}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">{order ? 'Editar Entrada' : 'Nova Entrada de Produção'}</h2>
           <button className="btn btn-ghost" onClick={onClose}>✕</button>
@@ -140,7 +140,7 @@ function CreateOrderModal({ order, onClose, onSaved }: {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {items.map((item, index) => (
                 <div key={index} className="card" style={{ padding: 16, borderLeft: '4px solid var(--color-primary)' }}>
-                  <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 100px 40px', alignItems: 'end' }}>
+                  <div className="order-item-grid">
                     <div className="form-group">
                       <label className="form-label">Selecione o Modelo *</label>
                       <select 
