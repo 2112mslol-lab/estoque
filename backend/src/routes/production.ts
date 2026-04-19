@@ -26,17 +26,23 @@ router.get('/backlog', authorize(['ADMIN']), async (req, res) => {
   }
 });
 
-// POST /api/production/start/:id - Iniciar produção de um item (Gera etapas)
+// POST /api/production/start/:id - Iniciar produção (Suporta quantidade parcial)
 router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
+  const { quantity } = req.body;
+  
   try {
     const item = await prisma.orderItem.findUnique({
       where: { id },
-      include: { productionSteps: true }
     });
 
     if (!item) return res.status(404).json({ error: 'Item não encontrado' });
     if (item.isStarted) return res.status(400).json({ error: 'Produção já iniciada para este item' });
+
+    const qtyToStart = quantity ? parseInt(quantity) : item.quantity;
+    if (qtyToStart <= 0 || qtyToStart > item.quantity) {
+      return res.status(400).json({ error: 'Quantidade inválida para iniciar' });
+    }
 
     // Buscar templates de etapas
     const templates = await prisma.productionStepTemplate.findMany({
@@ -44,29 +50,51 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
       orderBy: { stepOrder: 'asc' }
     });
 
-    // Criar etapas e marcar como iniciado (Limpando resquícios de tentativas anteriores)
-    await prisma.$transaction([
-      prisma.productionStep.deleteMany({
-        where: { orderItemId: id }
-      }),
-      prisma.productionStep.createMany({
-        data: templates.map(t => ({
-          orderItemId: id,
-          stepTemplateId: t.id,
-          stepName: t.name,
-          stepOrder: t.stepOrder,
-          estimatedMinutes: t.estimatedMinutes,
-          status: StepStatus.PENDING
-        }))
-      }),
-      prisma.orderItem.update({
+    let targetItemId = id;
+
+    // Se a quantidade for parcial, precisamos desmembrar o item
+    if (qtyToStart < item.quantity) {
+      const newItem = await prisma.orderItem.create({
+        data: {
+          orderId: item.orderId,
+          productId: item.productId,
+          productName: item.productName,
+          customization: item.customization,
+          quantity: qtyToStart,
+          status: 'IN_PRODUCTION',
+          isStarted: true,
+          priorityRank: item.priorityRank
+        }
+      });
+      
+      // Atualizar a quantidade do item original que permanece no backlog
+      await prisma.orderItem.update({
+        where: { id },
+        data: { quantity: item.quantity - qtyToStart }
+      });
+
+      targetItemId = newItem.id;
+    } else {
+      // Iniciar o item inteiro
+      await prisma.orderItem.update({
         where: { id },
         data: { isStarted: true, status: 'IN_PRODUCTION' }
-      })
-    ]);
+      });
+    }
 
+    // Criar etapas para o item que foi para produção
+    await prisma.productionStep.createMany({
+      data: templates.map(t => ({
+        orderItemId: targetItemId,
+        stepTemplateId: t.id,
+        stepName: t.name,
+        stepOrder: t.stepOrder,
+        estimatedMinutes: t.estimatedMinutes,
+        status: StepStatus.PENDING
+      }))
+    });
 
-    res.json({ message: 'Produção iniciada com sucesso' });
+    res.json({ message: 'Produção iniciada com sucesso', startedQuantity: qtyToStart });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro ao iniciar produção' });
