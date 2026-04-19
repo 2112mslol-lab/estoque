@@ -233,9 +233,18 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
                 <div key={idx} style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontWeight: 700 }}>{item.quantity}x {item.productName}</span>
-                    <span style={{ fontSize: 11, background: 'var(--color-primary-light)', padding: '2px 6px', borderRadius: 4 }}>
+                    <span style={{ 
+                      fontSize: 11, 
+                      padding: '2px 8px', 
+                      borderRadius: 6,
+                      fontWeight: 800,
+                      background: 'rgba(255,255,255,0.03)',
+                      color: item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-warning)' : 'var(--color-primary)'),
+                      border: `1px solid ${item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-warning)' : 'var(--color-primary)')}`
+                    }}>
                       {ORDER_STATUS_LABELS[item.status] || item.status}
                     </span>
+
                   </div>
                   {item.customization && <div style={{ fontSize: 12, color: 'var(--color-text-2)', fontStyle: 'italic' }}>Obs: {item.customization}</div>}
                 </div>
@@ -371,16 +380,17 @@ export default function OrdersPage() {
             ) : filtered.map(order => (
               <tr key={order.id}>
                 <td>
-                  <span style={{ 
+                   <span style={{ 
                     padding: '4px 10px', 
                     border: '1px solid currentColor',
                     borderRadius: 6, 
                     fontSize: 11, 
                     fontWeight: 800,
-                    color: order.status === 'PENDING' ? 'var(--color-warning)' : 'var(--color-success)'
+                    color: order.status === 'PENDING' ? 'var(--color-warning)' : (order.status === 'COMPLETED' || order.status === 'FINISHED' ? 'var(--color-success)' : 'var(--color-primary)')
                   }}>
                     {ORDER_STATUS_LABELS[order.status] || order.status}
                   </span>
+
                 </td>
                  <td>
                    <button 
