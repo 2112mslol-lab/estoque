@@ -31,6 +31,8 @@ import StockItemsPage from './pages/StockItemsPage';
 import OrderControlPage from './pages/OrderControlPage';
 import ProductionSectorPage from './pages/ProductionSectorPage';
 import PublicTrackingPage from './pages/PublicTrackingPage';
+import SettingsPage from './pages/SettingsPage';
+
 
 function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
   const [showProduction, setShowProduction] = useState(true);
