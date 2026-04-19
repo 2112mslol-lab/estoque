@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Eye, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Eye, X, Share2 } from 'lucide-react';
+
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -298,7 +299,19 @@ export default function OrdersPage() {
     o.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const handleShareTracking = (order: Order) => {
+    const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
+    const message = `Olá! Acompanhe o progresso do seu pedido na Toque Ideal através deste link: ${trackingUrl}`;
+    
+    navigator.clipboard.writeText(message).then(() => {
+      toast.success('Mensagem de rastreio copiada!');
+    }).catch(() => {
+      toast.error('Erro ao copiar link');
+    });
+  };
+
   return (
+
     <div>
       <div className="page-header">
         <div>
@@ -380,10 +393,12 @@ export default function OrdersPage() {
                 <td style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{format(new Date(order.createdAt), "dd/MM - HH:mm", { locale: ptBR })}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-ghost btn-sm" title="Rastreio Público" style={{ color: 'var(--color-primary)' }} onClick={() => handleShareTracking(order)}><Share2 size={16} /></button>
                     <button className="btn btn-ghost btn-sm" title="Detalhes" onClick={() => setViewOrder(order)}><Eye size={16} /></button>
                     <button className="btn btn-ghost btn-sm" title="Editar" onClick={() => handleEdit(order)}><Edit2 size={16} /></button>
                     <button className="btn btn-ghost btn-sm" title="Excluir" style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(order.id, order.orderNumber)}><Trash2 size={14} /></button>
                   </div>
+
                 </td>
               </tr>
             ))}

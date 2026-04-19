@@ -5,9 +5,11 @@ import {
   TrendingUp, 
   CheckCircle, 
   Zap, 
-  ClipboardList 
+  ClipboardList,
+  Share2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { DashboardData, Order } from '../types';
 import { STEP_LABELS, STEP_COLORS } from '../types';
@@ -31,6 +33,17 @@ export default function DashboardPage() {
   const fetchDashboard = async () => {
     const res = await api.get<DashboardData>('/dashboard');
     setData(res.data);
+  };
+
+  const handleShareTracking = (order: Order) => {
+    const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
+    const message = `Olá! Acompanhe o progresso do seu pedido na Toque Ideal através deste link: ${trackingUrl}`;
+    
+    navigator.clipboard.writeText(message).then(() => {
+      toast.success('Link de rastreio copiado!');
+    }).catch(() => {
+      toast.error('Erro ao copiar link');
+    });
   };
 
   useEffect(() => {
@@ -127,11 +140,16 @@ export default function DashboardPage() {
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{order.orderNumber} - {order.client.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{order.items?.length || 0} peças no pedido</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-warning)' }}>
-                    {new Date(order.deliveryDate).toLocaleDateString('pt-BR')}
+                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-warning)' }}>
+                      {new Date(order.deliveryDate).toLocaleDateString('pt-BR')}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>prazo limite</div>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>prazo limite</div>
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-primary)', padding: 6 }} onClick={() => handleShareTracking(order)}>
+                    <Share2 size={16} />
+                  </button>
                 </div>
               </div>
             )) : <p style={{ color: 'var(--color-text-3)', fontSize: 12 }}>Nenhuma entrega para os próximos dias.</p>}
