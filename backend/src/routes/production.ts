@@ -26,7 +26,7 @@ router.get('/backlog', authorize(['ADMIN']), async (req, res) => {
   }
 });
 
-// POST /api/production/start/:id - Iniciar produção (Suporta quantidade parcial)
+// POST /api/production/start/:id - Iniciar produção (Suporta quantidade parcial e reinício)
 router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   const { quantity } = req.body;
@@ -37,7 +37,6 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
     });
 
     if (!item) return res.status(404).json({ error: 'Item não encontrado' });
-    if (item.isStarted) return res.status(400).json({ error: 'Produção já iniciada para este item' });
 
     const qtyToStart = quantity ? parseInt(quantity) : item.quantity;
     if (qtyToStart <= 0 || qtyToStart > item.quantity) {
@@ -52,7 +51,7 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
 
     let targetItemId = id;
 
-    // Se a quantidade for parcial, precisamos desmembrar o item
+    // Se a quantidade for parcial, desmembramos o item
     if (qtyToStart < item.quantity) {
       const newItem = await prisma.orderItem.create({
         data: {
@@ -67,7 +66,6 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
         }
       });
       
-      // Atualizar a quantidade do item original que permanece no backlog
       await prisma.orderItem.update({
         where: { id },
         data: { quantity: item.quantity - qtyToStart }
@@ -75,24 +73,29 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
 
       targetItemId = newItem.id;
     } else {
-      // Iniciar o item inteiro
+      // Iniciar o item inteiro (ou reiniciar item que já estava como "true")
       await prisma.orderItem.update({
         where: { id },
         data: { isStarted: true, status: 'IN_PRODUCTION' }
       });
     }
 
-    // Criar etapas para o item que foi para produção
-    await prisma.productionStep.createMany({
-      data: templates.map(t => ({
-        orderItemId: targetItemId,
-        stepTemplateId: t.id,
-        stepName: t.name,
-        stepOrder: t.stepOrder,
-        estimatedMinutes: t.estimatedMinutes,
-        status: StepStatus.PENDING
-      }))
-    });
+    // LIMPEZA E CRIAÇÃO DAS ETAPAS (Garante que não haja erro 500 ou 400 por duplicidade)
+    await prisma.$transaction([
+      prisma.productionStep.deleteMany({
+        where: { orderItemId: targetItemId }
+      }),
+      prisma.productionStep.createMany({
+        data: templates.map(t => ({
+          orderItemId: targetItemId,
+          stepTemplateId: t.id,
+          stepName: t.name,
+          stepOrder: t.stepOrder,
+          estimatedMinutes: t.estimatedMinutes,
+          status: StepStatus.PENDING
+        }))
+      })
+    ]);
 
     res.json({ message: 'Produção iniciada com sucesso', startedQuantity: qtyToStart });
   } catch (error) {
@@ -101,9 +104,9 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
   }
 });
 
-// PUT /api/production/reorder - Atualizar ranking de prioridade (APENAS ADMIN)
+// PUT /api/production/reorder - Atualizar ranking de prioridade
 router.put('/reorder', authorize(['ADMIN']), async (req, res) => {
-  const { items } = req.body; // Array de { id: string, rank: number }
+  const { items } = req.body;
   try {
     await Promise.all(
       items.map((it: any) => 
@@ -119,7 +122,7 @@ router.put('/reorder', authorize(['ADMIN']), async (req, res) => {
   }
 });
 
-// GET /api/production/kanban - Lista de etapas (ORDEM POR RANKING)
+// GET /api/production/kanban
 router.get('/kanban', async (_req, res) => {
   try {
     const steps = await prisma.productionStep.findMany({
@@ -146,7 +149,7 @@ router.get('/kanban', async (_req, res) => {
   }
 });
 
-// GET /api/production/sector/:stepName - Setor (ORDEM POR RANKING)
+// GET /api/production/sector/:stepName
 router.get('/sector/:stepName', async (req, res) => {
   const { stepName } = req.params;
   try {
@@ -173,7 +176,7 @@ router.get('/sector/:stepName', async (req, res) => {
   }
 });
 
-// PUT /api/production/steps/:id - Atualizar status de uma etapa
+// PUT /api/production/steps/:id
 router.put('/steps/:id', async (req, res) => {
   const { id } = req.params;
   try {
