@@ -62,17 +62,11 @@ router.post('/', authorize(['ADMIN']), async (req, res) => {
             productName: item.productName,
             customization: item.customization,
             quantity: item.quantity || 1,
-            productionSteps: {
-              create: templates.map(t => ({
-                stepTemplateId: t.id,
-                stepName: t.name,
-                stepOrder: t.stepOrder,
-                estimatedMinutes: t.estimatedMinutes,
-                status: StepStatus.PENDING
-              }))
-            }
+            status: 'WAITING',
+            isStarted: false
           }))
         }
+
       },
       include: {
         items: { include: { productionSteps: true } }

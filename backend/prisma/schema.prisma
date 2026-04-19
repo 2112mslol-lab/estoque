@@ -60,8 +60,11 @@ model OrderItem {
   productName     String      // Nome copiado para histórico
   customization   String?     
   quantity        Int         @default(1)
-  status          String      @default("PENDING")
+  status          String      @default("WAITING") // WAITING, IN_PRODUCTION, COMPLETED
+  priorityRank    Int         @default(0)
+  isStarted       Boolean     @default(false)
   isPicked        Boolean     @default(false)
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

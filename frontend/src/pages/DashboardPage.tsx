@@ -72,6 +72,14 @@ export default function DashboardPage() {
           sub="histórico geral"
         />
         <StatCard
+          icon={<AlertTriangle size={22} />}
+          label="Aguardando Lançamento"
+          value={data.itemStock?.pending || 0}
+          accent="var(--color-warning)"
+          sub="precisa autorizar"
+        />
+
+        <StatCard
           icon={<Zap size={22} />}
           label="Em Produção"
           value={data.orders.inProduction + data.orders.pending}

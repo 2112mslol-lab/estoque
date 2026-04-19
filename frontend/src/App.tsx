@@ -32,6 +32,8 @@ import OrderControlPage from './pages/OrderControlPage';
 import ProductionSectorPage from './pages/ProductionSectorPage';
 import PublicTrackingPage from './pages/PublicTrackingPage';
 import SettingsPage from './pages/SettingsPage';
+import ProductionQueuePage from './pages/ProductionQueuePage';
+
 
 
 function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
@@ -82,6 +84,11 @@ function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogo
               <ClipboardList size={20} />
               <span>Entradas</span>
             </NavLink>
+            <NavLink to="/production-queue" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Zap size={20} style={{ color: 'var(--color-warning)' }} />
+              <span>Lançamento</span>
+            </NavLink>
+
             <NavLink to="/order-control" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <CheckSquare size={20} />
               <span>Expedição</span>
@@ -298,6 +305,8 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<DashboardPage />} />
                     <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
+                    <Route path="/production-queue" element={user?.role === 'ADMIN' ? <ProductionQueuePage /> : <Navigate to="/" />} />
+
                     <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
                     <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
                     <Route path="/kanban" element={<KanbanPage />} />

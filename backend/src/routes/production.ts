@@ -1,13 +1,93 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { StepStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
 router.use(authenticate);
 
-// GET /api/production/kanban - Lista de etapas pendentes/em progresso para o Kanban
+// GET /api/production/backlog - Itens aguardando início de produção
+router.get('/backlog', authorize(['ADMIN']), async (req, res) => {
+  try {
+    const items = await prisma.orderItem.findMany({
+      where: { isStarted: false },
+      include: {
+        order: { include: { client: true } }
+      },
+      orderBy: [
+        { priorityRank: 'asc' },
+        { createdAt: 'asc' }
+      ]
+    });
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar backlog' });
+  }
+});
+
+// POST /api/production/start/:id - Iniciar produção de um item (Gera etapas)
+router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const item = await prisma.orderItem.findUnique({
+      where: { id },
+      include: { productionSteps: true }
+    });
+
+    if (!item) return res.status(404).json({ error: 'Item não encontrado' });
+    if (item.isStarted) return res.status(400).json({ error: 'Produção já iniciada para este item' });
+
+    // Buscar templates de etapas
+    const templates = await prisma.productionStepTemplate.findMany({
+      where: { isActive: true },
+      orderBy: { stepOrder: 'asc' }
+    });
+
+    // Criar etapas e marcar como iniciado
+    await prisma.$transaction([
+      prisma.productionStep.createMany({
+        data: templates.map(t => ({
+          orderItemId: id,
+          stepTemplateId: t.id,
+          stepName: t.name,
+          stepOrder: t.stepOrder,
+          estimatedMinutes: t.estimatedMinutes,
+          status: StepStatus.PENDING
+        }))
+      }),
+      prisma.orderItem.update({
+        where: { id },
+        data: { isStarted: true, status: 'IN_PRODUCTION' }
+      })
+    ]);
+
+    res.json({ message: 'Produção iniciada com sucesso' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao iniciar produção' });
+  }
+});
+
+// PUT /api/production/reorder - Atualizar ranking de prioridade (APENAS ADMIN)
+router.put('/reorder', authorize(['ADMIN']), async (req, res) => {
+  const { items } = req.body; // Array de { id: string, rank: number }
+  try {
+    await Promise.all(
+      items.map((it: any) => 
+        prisma.orderItem.update({
+          where: { id: it.id },
+          data: { priorityRank: it.rank }
+        })
+      )
+    );
+    res.json({ message: 'Ranking atualizado' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao reordenar ranking' });
+  }
+});
+
+// GET /api/production/kanban - Lista de etapas (ORDEM POR RANKING)
 router.get('/kanban', async (_req, res) => {
   try {
     const steps = await prisma.productionStep.findMany({
@@ -18,14 +98,12 @@ router.get('/kanban', async (_req, res) => {
         item: {
           include: {
             productionSteps: true,
-            order: {
-              include: { client: true }
-            }
+            order: { include: { client: true } }
           }
         }
       },
-
       orderBy: [
+        { item: { priorityRank: 'asc' } },
         { item: { order: { deliveryDate: 'asc' } } },
         { stepOrder: 'asc' }
       ]
@@ -36,7 +114,7 @@ router.get('/kanban', async (_req, res) => {
   }
 });
 
-// GET /api/production/sector/:stepName - Lista de tarefas para um setor específico
+// GET /api/production/sector/:stepName - Setor (ORDEM POR RANKING)
 router.get('/sector/:stepName', async (req, res) => {
   const { stepName } = req.params;
   try {
@@ -48,13 +126,14 @@ router.get('/sector/:stepName', async (req, res) => {
       include: {
         item: {
           include: {
-            order: {
-              include: { client: true }
-            }
+            order: { include: { client: true } }
           }
         }
       },
-      orderBy: { item: { order: { deliveryDate: 'asc' } } }
+      orderBy: [
+        { item: { priorityRank: 'asc' } },
+        { item: { order: { deliveryDate: 'asc' } } }
+      ]
     });
     res.json(steps);
   } catch (error) {
@@ -82,7 +161,6 @@ router.put('/steps/:id', async (req, res) => {
       completedQuantity: completedQuantity !== undefined ? parseInt(completedQuantity) : undefined 
     };
 
-    // Logica de Status Automático baseado na quantidade
     if (completedQuantity !== undefined) {
       const qty = parseInt(completedQuantity);
       if (qty >= currentStep.item.quantity) {
@@ -107,17 +185,13 @@ router.put('/steps/:id', async (req, res) => {
       include: {
         item: {
           include: {
-            order: {
-              include: { client: true }
-            }
+            order: { include: { client: true } }
           }
         }
       }
     });
 
-    // Se concluiu a etapa, verificar se precisa criar/ativar a próxima ou atualizar o item
     if (updateData.status === StepStatus.COMPLETED) {
-       // Buscar próxima etapa
        const nextStep = await prisma.productionStep.findFirst({
          where: {
            orderItemId: step.orderItemId,
@@ -127,13 +201,11 @@ router.put('/steps/:id', async (req, res) => {
        });
 
        if (!nextStep) {
-         // Não tem mais etapas, marcar o item como concluído
          await prisma.orderItem.update({
            where: { id: step.orderItemId },
            data: { status: 'COMPLETED' }
          });
 
-         // Verificar se o pedido todo foi concluído
          const totalItems = await prisma.orderItem.count({ where: { orderId: step.item.orderId } });
          const completedItems = await prisma.orderItem.count({ where: { orderId: step.item.orderId, status: 'COMPLETED' } });
 
@@ -148,7 +220,6 @@ router.put('/steps/:id', async (req, res) => {
 
     res.json(step);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Erro ao atualizar etapa' });
   }
 });
