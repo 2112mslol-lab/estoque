@@ -84,29 +84,45 @@ router.get('/', async (_req, res) => {
       _count: { id: true },
     });
 
-    // Tempo médio por etapa (etapas concluídas)
+    // Tempo médio por etapa vs Estimado (etapas concluídas)
     const completedSteps = await prisma.productionStep.findMany({
       where: {
         status: StepStatus.COMPLETED,
         startedAt: { not: null },
         completedAt: { not: null },
       },
+      select: {
+        stepName: true,
+        startedAt: true,
+        completedAt: true,
+        estimatedMinutes: true
+      }
     });
 
-    const avgByStep: Record<string, { total: number; count: number }> = {};
+    const avgByStep: Record<string, { totalTime: number; totalEstimated: number; count: number }> = {};
     completedSteps.forEach(step => {
       if (!step.startedAt || !step.completedAt) return;
-      const minutes = (step.completedAt.getTime() - step.startedAt.getTime()) / 1000 / 60;
-      if (!avgByStep[step.stepName]) avgByStep[step.stepName] = { total: 0, count: 0 };
-      avgByStep[step.stepName].total += minutes;
+      const actualMinutes = (step.completedAt.getTime() - step.startedAt.getTime()) / 1000 / 60;
+      if (!avgByStep[step.stepName]) avgByStep[step.stepName] = { totalTime: 0, totalEstimated: 0, count: 0 };
+      avgByStep[step.stepName].totalTime += actualMinutes;
+      avgByStep[step.stepName].totalEstimated += (step.estimatedMinutes || 60);
       avgByStep[step.stepName].count += 1;
     });
 
-    const avgTimeByStep = Object.entries(avgByStep).map(([stepName, data]) => ({
-      stepName,
-      avgMinutes: Math.round(data.total / data.count),
-      completedCount: data.count,
-    }));
+    const avgTimeByStep = Object.entries(avgByStep).map(([stepName, stats]) => {
+      const avgActual = Math.round(stats.totalTime / stats.count);
+      const avgEst = Math.round(stats.totalEstimated / stats.count);
+      const efficiency = avgEst > 0 ? Math.round((avgEst / avgActual) * 100) : 100;
+      
+      return {
+        stepName,
+        avgMinutes: avgActual,
+        avgEstimated: avgEst,
+        efficiency: Math.min(efficiency, 200), // Cap at 200%
+        completedCount: stats.count,
+      };
+    });
+
 
     // Materiais com estoque baixo
     const materials = await prisma.material.findMany();
