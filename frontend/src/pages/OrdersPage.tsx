@@ -239,8 +239,9 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
                       borderRadius: 6,
                       fontWeight: 800,
                       background: 'rgba(255,255,255,0.03)',
-                      color: item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-warning)' : 'var(--color-primary)'),
-                      border: `1px solid ${item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-warning)' : 'var(--color-primary)')}`
+                      color: item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-danger)' : 'var(--color-warning)'),
+                      border: `1px solid ${item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-danger)' : 'var(--color-warning)')}`
+
                     }}>
                       {ORDER_STATUS_LABELS[item.status] || item.status}
                     </span>
@@ -386,7 +387,7 @@ export default function OrdersPage() {
                     borderRadius: 6, 
                     fontSize: 11, 
                     fontWeight: 800,
-                    color: order.status === 'PENDING' ? 'var(--color-warning)' : (order.status === 'COMPLETED' || order.status === 'FINISHED' ? 'var(--color-success)' : 'var(--color-primary)')
+                    color: order.status === 'PENDING' ? 'var(--color-danger)' : (order.status === 'COMPLETED' || order.status === 'FINISHED' ? 'var(--color-success)' : 'var(--color-warning)')
                   }}>
                     {ORDER_STATUS_LABELS[order.status] || order.status}
                   </span>
