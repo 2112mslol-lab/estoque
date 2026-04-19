@@ -168,10 +168,12 @@ router.get('/items', async (_req, res) => {
     const products = await prisma.product.findMany({
       include: {
         orderItems: {
-          where: { isPicked: false }, // Apenas o que ainda não saiu para entrega/separação
+          where: { isPicked: false },
           select: {
             status: true,
             quantity: true,
+            orderId: true,
+            isStock: true
           }
         }
       }
@@ -181,13 +183,22 @@ router.get('/items', async (_req, res) => {
       const counts = {
         pending: 0,
         production: 0,
-        packaged: 0
+        packaged: 0,
+        freeStock: 0 // Peças prontas e SEM pedido
       };
 
       p.orderItems.forEach((item: any) => {
-        if (item.status === 'PENDING') counts.pending += item.quantity;
-        else if (item.status === 'IN_PRODUCTION') counts.production += item.quantity;
-        else if (item.status === 'COMPLETED') counts.packaged += item.quantity;
+        if (item.status === 'PENDING' || item.status === 'WAITING') {
+          counts.pending += item.quantity;
+        } else if (item.status === 'IN_PRODUCTION') {
+          counts.production += item.quantity;
+        } else if (item.status === 'COMPLETED') {
+          if (!item.orderId || item.isStock) {
+            counts.freeStock += item.quantity;
+          } else {
+            counts.packaged += item.quantity;
+          }
+        }
       });
 
       return {
@@ -197,7 +208,8 @@ router.get('/items', async (_req, res) => {
       };
     });
 
-    res.json(summary.filter(s => (s.pending + s.production + s.packaged) > 0));
+    res.json(summary.filter(s => (s.pending + s.production + s.packaged + s.freeStock) > 0));
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro ao buscar resumo de itens' });
