@@ -259,4 +259,86 @@ router.put('/steps/:id', async (req, res) => {
   }
 });
 
+// POST /api/production/inject - Injetar peça diretamente em um setor (Pular etapas)
+router.post('/inject', authorize(['ADMIN', 'USER']), async (req, res) => {
+  const { orderItemId, targetStepName, quantity } = req.body;
+
+  try {
+    const item = await prisma.orderItem.findUnique({
+      where: { id: orderItemId },
+      include: { productionSteps: true }
+    });
+
+    if (!item) return res.status(404).json({ error: 'Item não encontrado' });
+
+    const qtyToInject = quantity ? parseInt(quantity) : item.quantity;
+    if (qtyToInject <= 0 || qtyToInject > item.quantity) {
+      return res.status(400).json({ error: 'Quantidade inválida' });
+    }
+
+    // Buscar todos os templates ativos
+    const templates = await prisma.productionStepTemplate.findMany({
+      where: { isActive: true },
+      orderBy: { stepOrder: 'asc' }
+    });
+
+    const targetTemplate = templates.find(t => t.name.toUpperCase() === targetStepName.toUpperCase());
+    if (!targetTemplate) return res.status(400).json({ error: 'Setor de destino inválido' });
+
+    let finalItemId = orderItemId;
+
+    // Se a quantidade for parcial, desmembrar (split)
+    if (qtyToInject < item.quantity) {
+      const newItem = await prisma.orderItem.create({
+        data: {
+          orderId: item.orderId,
+          productId: item.productId,
+          productName: item.productName,
+          customization: item.customization,
+          quantity: qtyToInject,
+          status: 'IN_PRODUCTION',
+          isStarted: true,
+          priorityRank: item.priorityRank
+        }
+      });
+      
+      await prisma.orderItem.update({
+        where: { id: orderItemId },
+        data: { quantity: item.quantity - qtyToInject }
+      });
+
+      finalItemId = newItem.id;
+    } else {
+      await prisma.orderItem.update({
+        where: { id: orderItemId },
+        data: { isStarted: true, status: 'IN_PRODUCTION' }
+      });
+    }
+
+    // Criar/Resetar etapas até o alvo
+    // Etapas anteriores ao alvo = COMPLETED
+    // Etapa alvo e posteriores = PENDING
+    await prisma.productionStep.deleteMany({ where: { orderItemId: finalItemId } });
+
+    await prisma.productionStep.createMany({
+      data: templates.map(t => ({
+        orderItemId: finalItemId,
+        stepTemplateId: t.id,
+        stepName: t.name,
+        stepOrder: t.stepOrder,
+        estimatedMinutes: t.estimatedMinutes,
+        status: t.stepOrder < targetTemplate.stepOrder ? StepStatus.COMPLETED : StepStatus.PENDING,
+        completedQuantity: t.stepOrder < targetTemplate.stepOrder ? qtyToInject : 0,
+        completedAt: t.stepOrder < targetTemplate.stepOrder ? new Date() : null
+      }))
+    });
+
+    res.json({ message: `Item injetado no setor ${targetStepName}` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao injetar item no setor' });
+  }
+});
+
 export default router;
+

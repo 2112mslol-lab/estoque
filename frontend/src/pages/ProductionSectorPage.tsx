@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { 
   Clock, 
   RefreshCw,
   Package,
   CheckCircle2,
-  PlayCircle,
-  Hash
+  Hash,
+  PlusCircle,
+  X,
+  Play
 } from 'lucide-react';
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import type { ProductionStep, StepName } from '../types';
+import type { ProductionStep, Order } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS } from '../types';
 import api from '../services/api';
 
@@ -20,6 +22,15 @@ export default function ProductionSectorPage() {
   const { sector } = useParams<{ sector: string }>();
   const [steps, setSteps] = useState<ProductionStep[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Estados para Entrada Manual
+  const [showManual, setShowManual] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [manualForm, setManualForm] = useState({
+    itemId: '',
+    quantity: 1
+  });
 
   const stepName = sector?.toUpperCase() || '';
   const label = STEP_LABELS[stepName] || sector || 'Setor';
@@ -32,6 +43,12 @@ export default function ProductionSectorPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchOrders = async () => {
+    const res = await api.get('/orders');
+    // Filtrar apenas pedidos que não estão DEUVERED ou CANCELLED
+    setOrders(res.data.filter((o: any) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED'));
   };
 
   useEffect(() => { 
@@ -50,6 +67,27 @@ export default function ProductionSectorPage() {
     }
   };
 
+  const handleOpenManual = () => {
+    fetchOrders();
+    setShowManual(true);
+  };
+
+  const handleInject = async () => {
+    if (!manualForm.itemId) return toast.error('Selecione uma peça');
+    try {
+      await api.post('/production/inject', {
+        orderItemId: manualForm.itemId,
+        targetStepName: stepName,
+        quantity: manualForm.quantity
+      });
+      toast.success('Peça adicionada ao setor!');
+      setShowManual(false);
+      fetchSteps();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao adicionar peça');
+    }
+  };
+
   return (
     <div className="fade-in">
       <div className="page-header" style={{ borderBottom: `4px solid ${STEP_COLORS[stepName] || 'var(--color-primary)'}`, paddingBottom: 20 }}>
@@ -61,6 +99,9 @@ export default function ProductionSectorPage() {
           <p className="page-subtitle">Pilha de trabalho atual e prioridades</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-primary" style={{ gap: 8 }} onClick={handleOpenManual}>
+               <PlusCircle size={18} /> Entrada Manual
+            </button>
             <div className="card" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.03)' }}>
                 <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-primary)' }}>{steps.length}</span>
                 <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>PEÇAS NA FILA</span>
@@ -89,7 +130,6 @@ export default function ProductionSectorPage() {
 
           return (
             <div key={step.id} className={`card shadow-premium ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
-              
               <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: STEP_COLORS[stepName] || 'var(--color-primary)', width: `${completionPercent}%`, transition: 'width 0.5s ease' }} />
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -169,6 +209,67 @@ export default function ProductionSectorPage() {
           );
         })}
       </div>
+
+      {/* MODAL DE ENTRADA MANUAL */}
+      {showManual && (
+        <div className="modal-overlay" onClick={() => setShowManual(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
+             <div className="modal-header">
+                <h2 className="modal-title">Entrada Manual - {label}</h2>
+                <button className="btn btn-ghost" onClick={() => setShowManual(false)}><X size={20}/></button>
+             </div>
+             <div className="modal-body">
+                <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 20 }}>
+                  Use esta opção para puxar uma peça de um pedido diretamente para este setor, pulando etapas anteriores.
+                </p>
+                
+                <div className="form-group">
+                  <label className="form-label">Selecione o Pedido</label>
+                  <select className="form-input" onChange={(e) => {
+                    const order = orders.find(o => o.id === e.target.value);
+                    setSelectedOrder(order || null);
+                    setManualForm({ ...manualForm, itemId: '' });
+                  }}>
+                    <option value="">Selecione um pedido...</option>
+                    {orders.map(o => (
+                      <option key={o.id} value={o.id}>{o.orderNumber} - {o.client?.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedOrder && (
+                  <div className="form-group">
+                    <label className="form-label">Selecione a Peça</label>
+                    <select className="form-input" value={manualForm.itemId} onChange={(e) => setManualForm({ ...manualForm, itemId: e.target.value })}>
+                      <option value="">Selecione...</option>
+                      {selectedOrder.items.map(item => (
+                        <option key={item.id} value={item.id}>{item.quantity}x {item.productName}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Quantidade a Produzir neste Setor</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    min="1"
+                    max={selectedOrder?.items.find(i => i.id === manualForm.itemId)?.quantity || 1}
+                    value={manualForm.quantity}
+                    onChange={(e) => setManualForm({ ...manualForm, quantity: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+             </div>
+             <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowManual(false)}>Cancelar</button>
+                <button className="btn btn-primary" style={{ gap: 8 }} onClick={handleInject}>
+                  <Play size={16} fill="white" /> Injetar no Setor
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
