@@ -129,15 +129,31 @@ export default function ProductionSectorPage() {
           const completionPercent = (step.completedQuantity / step.item.quantity) * 100;
 
           return (
-            <div key={step.id} className={`card shadow-premium ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+            <div 
+              key={step.id} 
+              className={`card shadow-premium ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''} ${step.item?.priorityRank === 1 ? 'priority-1' : ''}`} 
+              style={{ 
+                position: 'relative', 
+                overflow: 'hidden',
+                border: step.item?.priorityRank === 1 ? '2px solid var(--color-warning)' : undefined,
+                boxShadow: step.item?.priorityRank === 1 ? '0 0 15px rgba(245, 158, 11, 0.2)' : undefined
+              }}
+            >
+
               <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: STEP_COLORS[stepName] || 'var(--color-primary)', width: `${completionPercent}%`, transition: 'width 0.5s ease' }} />
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 16, fontWeight: 800, color: hasUrgency ? 'var(--color-danger)' : 'var(--color-primary)' }}>#{step.item?.order?.orderNumber}</span>
+                        {step.item?.priorityRank && (
+                          <span style={{ fontSize: 10, background: step.item.priorityRank === 1 ? 'var(--color-warning)' : 'var(--color-surface-3)', color: step.item.priorityRank === 1 ? 'black' : 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>
+                            {step.item.priorityRank}º NA FILA
+                          </span>
+                        )}
                         {hasUrgency && <span className="badge badge-danger" style={{ fontSize: 9 }}>URGENTE</span>}
                    </div>
+
                    <div style={{ fontSize: 14, fontWeight: 700 }}>{step.item?.productName}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

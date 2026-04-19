@@ -64,8 +64,10 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
       style={{
         ...style,
         borderTop: isQuickWin ? '4px solid #10b981' : undefined,
-        boxShadow: isQuickWin ? '0 0 15px rgba(16, 185, 129, 0.2)' : undefined
+        boxShadow: isQuickWin ? '0 0 15px rgba(16, 185, 129, 0.2)' : (step.item?.priorityRank === 1 ? '0 0 12px var(--color-warning)' : undefined),
+        border: step.item?.priorityRank === 1 ? '2px solid var(--color-warning)' : undefined
       } as any}
+
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -73,8 +75,14 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
             <span style={{ fontSize: 13, fontWeight: 700, color: hasUrgency ? 'var(--color-danger)' : 'var(--color-primary)' }}>
               {step.item?.order?.orderNumber}
             </span>
+            {step.item?.priorityRank && (
+              <span style={{ fontSize: 10, background: step.item.priorityRank === 1 ? 'var(--color-warning)' : 'var(--color-surface-3)', color: step.item.priorityRank === 1 ? 'black' : 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900, border: '1px solid rgba(255,255,255,0.1)' }}>
+                {step.item.priorityRank}º FILA
+              </span>
+            )}
             {hasUrgency && <span style={{ fontSize: 8, background: 'var(--color-danger)', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>URGENTE</span>}
             {isQuickWin && <span style={{ fontSize: 8, background: '#10b981', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>QUASE PRONTO</span>}
+
           </div>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>
             {step.item?.quantity}x {step.item?.productName}
