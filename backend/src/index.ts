@@ -13,6 +13,8 @@ import stockRoutes from './routes/stock';
 import alertRoutes from './routes/alerts';
 import dashboardRoutes from './routes/dashboard';
 import configRoutes from './routes/configs';
+import publicRoutes from './routes/public';
+
 
 import { setupWebSocket } from './websocket/socket';
 import { checkAndCreateAlerts } from './services/alertScheduler';
@@ -105,6 +107,8 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/configs', configRoutes);
+app.use('/api/public', publicRoutes);
+
 
 // ...
 setupWebSocket(io);

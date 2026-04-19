@@ -87,15 +87,22 @@ model Product {
 }
 
 // ==================== ETAPAS DE PRODUÇÃO (AGORA VINCULADAS AO ITEM) ====================
-enum StepName {
-  CUTTING      // Corte
-  MOLDING      // Modelagem
-  PAINTING     // Pintura
-  FINISHING    // Acabamento
-  GLOSS        // Brilho
-  CLEANING     // Limpeza
-  PACKAGING    // Embalagem
+// As etapas agora são dinâmicas e definidas pelo usuário via templates
+model ProductionStepTemplate {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  stepOrder        Int      @default(0)
+  estimatedMinutes Int      @default(60)
+  isActive         Boolean  @default(true)
+  color            String?  // Ex: #FF0000
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  productionSteps  ProductionStep[]
+
+  @@map("production_step_templates")
 }
+
 
 
 
@@ -109,7 +116,8 @@ enum StepStatus {
 model ProductionStep {
   id              String     @id @default(uuid())
   orderItemId     String     // Vinculado à peça específica
-  stepName        StepName
+  stepTemplateId  String?    // Vinculado ao template original (opcional para manter flexibilidade)
+  stepName        String     // Nome da etapa (salvo como string para suportar mudanças no template)
   stepOrder       Int
   status          StepStatus @default(PENDING)
   estimatedMinutes Int       @default(60)
@@ -120,11 +128,13 @@ model ProductionStep {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  item            OrderItem  @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  item            OrderItem               @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  template        ProductionStepTemplate? @relation(fields: [stepTemplateId], references: [id])
 
   @@unique([orderItemId, stepName])
   @@map("production_steps")
 }
+
 
 // ==================== ESTOQUE ====================
 enum UnitType {
@@ -219,7 +229,7 @@ model User {
 
 model StepConfig {
   id               String   @id @default(uuid())
-  stepName         StepName @unique
+  stepName         String   @unique
   estimatedMinutes Int
   description      String?
   updatedAt        DateTime @updatedAt

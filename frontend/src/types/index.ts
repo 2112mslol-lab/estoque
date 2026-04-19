@@ -41,7 +41,8 @@ export interface Product {
   description?: string;
 }
 
-export type StepName = 'CUTTING' | 'MOLDING' | 'PAINTING' | 'FINISHING' | 'GLOSS' | 'CLEANING' | 'PACKAGING';
+export type StepName = string;
+
 export type StepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
 
 export interface ProductionStep {

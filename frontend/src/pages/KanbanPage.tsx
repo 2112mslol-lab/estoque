@@ -149,16 +149,23 @@ function KanbanColumn({ stepName, steps, onUpdateStep }: {
 
 export default function KanbanPage() {
   const [steps, setSteps] = useState<ProductionStep[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   const fetchSteps = async () => {
     try {
-      const res = await api.get('/production/kanban');
-      setSteps(res.data);
+      const [stepsRes, templatesRes] = await Promise.all([
+        api.get('/production/kanban'),
+        api.get('/configs/templates')
+      ]);
+      setSteps(stepsRes.data);
+      setTemplates(templatesRes.data.filter((t: any) => t.isActive));
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => { 
     fetchSteps(); 
@@ -181,7 +188,8 @@ export default function KanbanPage() {
     if (!over) return;
   };
 
-  const columns: StepName[] = ['CUTTING', 'MOLDING', 'PAINTING', 'FINISHING', 'GLOSS', 'CLEANING', 'PACKAGING'];
+  const columns = templates.map(t => t.name);
+
 
   return (
     <div>

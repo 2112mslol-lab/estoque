@@ -14,6 +14,8 @@ import {
   CheckSquare
 } from 'lucide-react';
 import { useSocket } from './hooks/useSocket';
+import { STEP_LABELS } from './types';
+
 
 import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
@@ -25,10 +27,13 @@ import LoginPage from './pages/LoginPage';
 import StockItemsPage from './pages/StockItemsPage';
 import OrderControlPage from './pages/OrderControlPage';
 import ProductionSectorPage from './pages/ProductionSectorPage';
+import PublicTrackingPage from './pages/PublicTrackingPage';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 
-function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () => void }) {
+
+function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
+
   const [showProduction, setShowProduction] = useState(true);
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -54,27 +59,12 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
 
         {showProduction && (
           <div style={{ marginLeft: 32, display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
-            <NavLink to="/production/cutting" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>1. Corte</span>
-            </NavLink>
-            <NavLink to="/production/molding" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>2. Molde / Forno</span>
-            </NavLink>
-            <NavLink to="/production/painting" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>3. Pintura</span>
-            </NavLink>
-            <NavLink to="/production/finishing" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>4. Acabamento</span>
-            </NavLink>
-            <NavLink to="/production/gloss" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>5. Brilho</span>
-            </NavLink>
-            <NavLink to="/production/cleaning" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>6. Limpeza</span>
-            </NavLink>
-            <NavLink to="/production/packaging" className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-              <span>7. Embalagem</span>
-            </NavLink>
+            {sectors.map((s, index) => (
+              <NavLink key={s.id} to={`/production/${s.name.toLowerCase()}`} className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+                <span>{index + 1}. {STEP_LABELS[s.name.toUpperCase()] || s.name}</span>
+              </NavLink>
+            ))}
+
           </div>
         )}
 
@@ -135,7 +125,8 @@ function Sidebar({ alertCount, onLogout }: { alertCount: number, onLogout: () =>
   );
 }
 
-function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () => void }) {
+function MobileNav({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
+
   const [showMore, setShowMore] = useState(false);
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -217,14 +208,13 @@ function MobileNav({ alertCount, onLogout }: { alertCount: number, onLogout: () 
               <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
                 <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 8, paddingLeft: 12 }}>SETORES DA FÁBRICA</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <NavLink to="/production/cutting" className="nav-link-sub" onClick={() => setShowMore(false)}>Corte</NavLink>
-                    <NavLink to="/production/molding" className="nav-link-sub" onClick={() => setShowMore(false)}>Molde</NavLink>
-                    <NavLink to="/production/painting" className="nav-link-sub" onClick={() => setShowMore(false)}>Pintura</NavLink>
-                    <NavLink to="/production/finishing" className="nav-link-sub" onClick={() => setShowMore(false)}>Acabam.</NavLink>
-                    <NavLink to="/production/gloss" className="nav-link-sub" onClick={() => setShowMore(false)}>Brilho</NavLink>
-                    <NavLink to="/production/cleaning" className="nav-link-sub" onClick={() => setShowMore(false)}>Limpeza</NavLink>
-                    <NavLink to="/production/packaging" className="nav-link-sub" onClick={() => setShowMore(false)}>Embal.</NavLink>
+                    {sectors.map(s => (
+                      <NavLink key={s.id} to={`/production/${s.name.toLowerCase()}`} className="nav-link-sub" onClick={() => setShowMore(false)}>
+                        {STEP_LABELS[s.name.toUpperCase()] || s.name}
+                      </NavLink>
+                    ))}
                 </div>
+
               </div>
               
               <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
@@ -246,7 +236,9 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [alertCount, setAlertCount] = useState(0);
+  const [sectors, setSectors] = useState<any[]>([]);
   const { subscribe } = useSocket();
+
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -264,8 +256,10 @@ export default function App() {
   useEffect(() => {
     if (user) {
       fetchAlertCount();
+      api.get('/configs/templates').then(res => setSectors(res.data.filter((t: any) => t.isActive))).catch(() => {});
     }
   }, [user]);
+
 
   useEffect(() => {
     if (user) {
@@ -282,51 +276,58 @@ export default function App() {
 
   if (loading) return null;
 
-  if (!user) {
-    return (
-      <>
-        <LoginPage onLogin={setUser} />
-        <Toaster position="top-right" />
-      </>
-    );
-  }
-
   return (
     <BrowserRouter>
-      <div className="app-container">
-        <Sidebar alertCount={alertCount} onLogout={handleLogout} />
-        
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
-            <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
-            <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
-            <Route path="/kanban" element={<KanbanPage />} />
-            <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
-            <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
-            <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
-            <Route path="/production/:sector" element={<ProductionSectorPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
+      <Routes>
+        {/* Rota Pública de Rastreio (Sempre acessível) */}
+        <Route path="/tracking/:id" element={<PublicTrackingPage />} />
 
-        <MobileNav alertCount={alertCount} onLogout={handleLogout} />
+        {/* Rotas Protegidas */}
+        <Route 
+          path="/*" 
+          element={
+            !user ? (
+              <LoginPage onLogin={setUser} />
+            ) : (
+              <div className="app-container">
+                <Sidebar alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
+                
+                <main className="main-content">
+                  <Routes>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
+                    <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
+                    <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
+                    <Route path="/kanban" element={<KanbanPage />} />
+                    <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
+                    <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
+                    <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
+                    <Route path="/production/:sector" element={<ProductionSectorPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </main>
 
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: 'var(--color-surface-2)',
-              color: 'var(--color-text-1)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '12px',
-            }
-          }}
+                <MobileNav alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
+              </div>
+            )
+          } 
         />
-      </div>
+      </Routes>
+      
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: 'var(--color-surface-2)',
+            color: 'var(--color-text-1)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '12px',
+          }
+        }}
+      />
     </BrowserRouter>
   );
 }
+
 
 

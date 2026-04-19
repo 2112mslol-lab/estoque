@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { io } from '../index';
-import { OrderStatus, StepName, StepStatus } from '@prisma/client';
+import { OrderStatus, StepStatus } from '@prisma/client';
+
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -40,12 +41,12 @@ router.post('/', authorize(['ADMIN']), async (req, res) => {
     const count = await prisma.order.count();
     const orderNumber = `ORD-${new Date().getFullYear()}-${(count + 1).toString().padStart(3, '0')}`;
 
-    // Buscar configurações de etapas para o tempo estimado
-    const stepConfigs = await prisma.stepConfig.findMany();
-    const stepConfigsMap = stepConfigs.reduce((acc, curr) => ({
-      ...acc,
-      [curr.stepName]: curr.estimatedMinutes
-    }), {} as Record<string, number>);
+    // Buscar os templates de etapas ATIVOS e ORDENADOS
+    const templates = await prisma.productionStepTemplate.findMany({
+      where: { isActive: true },
+      orderBy: { stepOrder: 'asc' },
+    });
+
 
     // Criar o pedido e já incluir os itens e suas etapas de produção
     const order = await prisma.order.create({
@@ -62,17 +63,13 @@ router.post('/', authorize(['ADMIN']), async (req, res) => {
             customization: item.customization,
             quantity: item.quantity || 1,
             productionSteps: {
-              create: [
-                { stepName: StepName.CUTTING,   stepOrder: 1, estimatedMinutes: stepConfigsMap[StepName.CUTTING] || 60 },
-                { stepName: StepName.MOLDING,   stepOrder: 2, estimatedMinutes: stepConfigsMap[StepName.MOLDING] || 120 },
-                { stepName: StepName.PAINTING,  stepOrder: 3, estimatedMinutes: stepConfigsMap[StepName.PAINTING] || 90 },
-                { stepName: StepName.FINISHING, stepOrder: 4, estimatedMinutes: stepConfigsMap[StepName.FINISHING] || 45 },
-                { stepName: StepName.GLOSS,     stepOrder: 5, estimatedMinutes: stepConfigsMap[StepName.GLOSS] || 30 },
-                { stepName: StepName.CLEANING,  stepOrder: 6, estimatedMinutes: stepConfigsMap[StepName.CLEANING] || 30 },
-                { stepName: StepName.PACKAGING, stepOrder: 7, estimatedMinutes: stepConfigsMap[StepName.PACKAGING] || 30 },
-
-
-              ]
+              create: templates.map(t => ({
+                stepTemplateId: t.id,
+                stepName: t.name,
+                stepOrder: t.stepOrder,
+                estimatedMinutes: t.estimatedMinutes,
+                status: StepStatus.PENDING
+              }))
             }
           }))
         }

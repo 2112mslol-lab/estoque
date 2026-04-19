@@ -21,10 +21,9 @@ export default function ProductionSectorPage() {
   const [steps, setSteps] = useState<ProductionStep[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const stepName = sector?.toUpperCase() as StepName;
-  const label = STEP_LABELS[stepName];
+  const stepName = sector?.toUpperCase() || '';
+  const label = STEP_LABELS[stepName] || sector || 'Setor';
 
-  if (!label) return <Navigate to="/kanban" replace />;
 
   const fetchSteps = async () => {
     try {
@@ -55,12 +54,14 @@ export default function ProductionSectorPage() {
 
   return (
     <div className="fade-in">
-      <div className="page-header" style={{ borderBottom: `4px solid ${STEP_COLORS[stepName]}`, paddingBottom: 20 }}>
+      <div className="page-header" style={{ borderBottom: `4px solid ${STEP_COLORS[stepName] || 'var(--color-primary)'}`, paddingBottom: 20 }}>
+
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: '1.5em' }}>{STEP_EMOJIS[stepName]}</span>
+            <span style={{ fontSize: '1.5em' }}>{STEP_EMOJIS[stepName] || '🛠️'}</span>
             Setor de {label}
           </h1>
+
           <p className="page-subtitle">Pilha de trabalho atual e prioridades</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
