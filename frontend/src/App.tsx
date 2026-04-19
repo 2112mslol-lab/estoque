@@ -11,11 +11,12 @@ import {
   Users,
   LogOut,
   Archive,
-  CheckSquare
+  CheckSquare,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useSocket } from './hooks/useSocket';
 import { STEP_LABELS } from './types';
-
 
 import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
@@ -28,12 +29,8 @@ import StockItemsPage from './pages/StockItemsPage';
 import OrderControlPage from './pages/OrderControlPage';
 import ProductionSectorPage from './pages/ProductionSectorPage';
 import PublicTrackingPage from './pages/PublicTrackingPage';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-
-
 
 function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
-
   const [showProduction, setShowProduction] = useState(true);
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -64,7 +61,6 @@ function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogo
                 <span>{index + 1}. {STEP_LABELS[s.name.toUpperCase()] || s.name}</span>
               </NavLink>
             ))}
-
           </div>
         )}
 
@@ -109,8 +105,6 @@ function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogo
         </NavLink>
       </nav>
 
-      {/* ... rest of sidebar code ... */}
-
       <div style={{ padding: '20px 0', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ padding: '0 20px', marginBottom: 10 }}>
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operador:</div>
@@ -126,7 +120,6 @@ function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogo
 }
 
 function MobileNav({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
-
   const [showMore, setShowMore] = useState(false);
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -214,7 +207,6 @@ function MobileNav({ alertCount, onLogout, sectors }: { alertCount: number, onLo
                       </NavLink>
                     ))}
                 </div>
-
               </div>
               
               <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
@@ -239,7 +231,6 @@ export default function App() {
   const [sectors, setSectors] = useState<any[]>([]);
   const { subscribe } = useSocket();
 
-
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -260,7 +251,6 @@ export default function App() {
     }
   }, [user]);
 
-
   useEffect(() => {
     if (user) {
       const unsubscribe = subscribe('alert:new', fetchAlertCount);
@@ -278,16 +268,19 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {/* Rotas Públicas Externas (Layout sem Sidebar) */}
       <Routes>
-        {/* Rota Pública de Rastreio (Sempre acessível) */}
         <Route path="/tracking/:id" element={<PublicTrackingPage />} />
-
-        {/* Rotas Protegidas */}
+        
+        {/* Rota Raiz que decide entre Login ou App */}
         <Route 
           path="/*" 
           element={
             !user ? (
-              <LoginPage onLogin={setUser} />
+              <>
+                <LoginPage onLogin={setUser} />
+                <Toaster position="top-right" />
+              </>
             ) : (
               <div className="app-container">
                 <Sidebar alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
@@ -308,26 +301,12 @@ export default function App() {
                 </main>
 
                 <MobileNav alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
+                <Toaster position="top-right" />
               </div>
             )
           } 
         />
       </Routes>
-      
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: 'var(--color-surface-2)',
-            color: 'var(--color-text-1)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '12px',
-          }
-        }}
-      />
     </BrowserRouter>
   );
 }
-
-
-

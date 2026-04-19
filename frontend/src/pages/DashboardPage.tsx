@@ -89,7 +89,7 @@ export default function DashboardPage() {
           </div>
           {data.stepCounts.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={data.stepCounts.filter(s => s.status === 'IN_PROGRESS').map(s => ({
+              <BarChart data={data.stepCounts.filter(s => ['IN_PROGRESS', 'PENDING'].includes(s.status)).map(s => ({
                 name: STEP_LABELS[s.stepName] || s.stepName,
                 quantidade: s._count.id,
                 color: STEP_COLORS[s.stepName] || '#333'
@@ -101,12 +101,13 @@ export default function DashboardPage() {
                   contentStyle={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 12 }}
                 />
                 <Bar dataKey="quantidade" radius={[6, 6, 0, 0]}>
-                  {data.stepCounts.filter(s => s.status === 'IN_PROGRESS').map((entry: any, index: number) => (
+                  {data.stepCounts.filter(s => ['IN_PROGRESS', 'PENDING'].includes(s.status)).map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={STEP_COLORS[entry.stepName] || '#333'} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+
           ) : (
             <div className="empty-state" style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-3)' }}>
               Nenhuma peça em produção agora
