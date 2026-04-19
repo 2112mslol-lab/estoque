@@ -171,4 +171,20 @@ router.put('/items/:id/pick', authorize(['ADMIN']), async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/priority - Alternar prioridade (Estrela) (APENAS ADMIN)
+router.patch('/:id/priority', authorize(['ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  const { isPriority } = req.body;
+  try {
+    const order = await prisma.order.update({
+      where: { id },
+      data: { isPriority }
+    });
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar prioridade' });
+  }
+});
+
 export default router;
+

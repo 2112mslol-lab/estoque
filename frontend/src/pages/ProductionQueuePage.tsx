@@ -6,12 +6,16 @@ import {
   Clock,
   Zap,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Plus,
+  X,
+  Package
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Product } from '../types';
 
 interface BacklogItem {
   id: string;
@@ -23,24 +27,33 @@ interface BacklogItem {
   order: {
     orderNumber: string;
     deliveryDate: string;
+    isPriority: boolean;
     client: { name: string };
   };
 }
 
 export default function ProductionQueuePage() {
   const [items, setItems] = useState<BacklogItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [startQuantities, setStartQuantities] = useState<Record<string, number>>({});
+  
+  // Estados para Produção Manual
+  const [showManual, setShowManual] = useState(false);
+  const [manualForm, setManualForm] = useState({ productId: '', quantity: 1 });
 
-  const fetchBacklog = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get('/production/backlog');
-      setItems(res.data);
+      const [backlogRes, productsRes] = await Promise.all([
+        api.get('/production/backlog'),
+        api.get('/products')
+      ]);
+      setItems(backlogRes.data);
+      setProducts(productsRes.data);
       
-      // Inicializar as quantidades com o total
       const qtys: Record<string, number> = {};
-      res.data.forEach((it: BacklogItem) => {
+      backlogRes.data.forEach((it: BacklogItem) => {
         qtys[it.id] = it.quantity;
       });
       setStartQuantities(qtys);
@@ -49,18 +62,28 @@ export default function ProductionQueuePage() {
     }
   };
 
-  useEffect(() => { fetchBacklog(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleStartProduction = async (id: string) => {
     const qty = startQuantities[id];
-    if (!qty || qty <= 0) return toast.error('Quantidade inválida');
-
     try {
       await api.post(`/production/start/${id}`, { quantity: qty });
-      toast.success(`LANÇADO: ${qty} UNIDADES NA FÁBRICA! 🚀`);
-      fetchBacklog();
+      toast.success(`LANÇADO: ${qty} UNIDADES! 🚀`);
+      fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao iniciar produção');
+      toast.error(err.response?.data?.error || 'Erro ao iniciar');
+    }
+  };
+
+  const handleManualLaunch = async () => {
+    if (!manualForm.productId) return toast.error('Selecione um produto');
+    try {
+      await api.post('/production/manual-launch', manualForm);
+      toast.success('PRODUÇÃO AVULSA LANÇADA! 🛠️');
+      setShowManual(false);
+      fetchData();
+    } catch (err) {
+      toast.error('Erro ao lançar manual');
     }
   };
 
@@ -72,28 +95,24 @@ export default function ProductionQueuePage() {
   const handleMove = async (index: number, direction: 'up' | 'down') => {
     const newItems = [...items];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
     if (targetIndex < 0 || targetIndex >= items.length) return;
-
     const temp = newItems[index];
     newItems[index] = newItems[targetIndex];
     newItems[targetIndex] = temp;
-
     const updated = newItems.map((it, idx) => ({ id: it.id, rank: idx + 1 }));
     setItems(newItems.map((it, idx) => ({ ...it, priorityRank: idx + 1 })));
-
     try {
       await api.put('/production/reorder', { items: updated });
     } catch (err) {
-      toast.error('Erro ao salvar nova ordem');
-      fetchBacklog();
+      toast.error('Erro ao reordenar');
+      fetchData();
     }
   };
 
   const filteredItems = items.filter(it => 
     it.productName.toLowerCase().includes(search.toLowerCase()) ||
-    it.order.client.name.toLowerCase().includes(search.toLowerCase()) ||
-    it.order.orderNumber.toLowerCase().includes(search.toLowerCase())
+    it.order?.client?.name.toLowerCase().includes(search.toLowerCase()) ||
+    it.order?.orderNumber.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -102,13 +121,18 @@ export default function ProductionQueuePage() {
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
              <Zap size={32} style={{ color: 'var(--color-warning)' }} />
-             Fila de Lançamento (Backlog)
+             Fila de Lançamento
           </h1>
-          <p className="page-subtitle">Puxe peças dos pedidos e envie para a fábrica com a quantidade desejada.</p>
+          <p className="page-subtitle">Puxe itens para a fábrica. O sistema fará a entrega inteligente no final.</p>
         </div>
-        <div className="card" style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>
-           <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-warning)' }}>{items.length}</span>
-           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-2)' }}>FILA DE ESPERA</span>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn btn-primary" style={{ gap: 8 }} onClick={() => setShowManual(true)}>
+             <Plus size={18} /> Produção Livre (Estoque)
+          </button>
+          <div className="card" style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(245, 158, 11, 0.1)', border: '1px solid var(--color-warning)' }}>
+             <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-warning)' }}>{items.length}</span>
+             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-2)' }}>FILA DE ESPERA</span>
+          </div>
         </div>
       </div>
 
@@ -130,21 +154,22 @@ export default function ProductionQueuePage() {
           <thead>
             <tr>
               <th style={{ width: 80 }}>Fila</th>
+              <th>⭐</th>
               <th>Informações da Peça</th>
               <th>Cliente</th>
               <th>Entrega</th>
-              <th style={{ textAlign: 'center' }}>Qtd. para Lançar</th>
-              <th style={{ textAlign: 'center' }}>Comando</th>
+              <th style={{ textAlign: 'center' }}>Qtd. p/ Lançar</th>
+              <th style={{ textAlign: 'center' }}>Ação</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 60 }}>Carregando fila...</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 60 }}>Sincronizando fila...</td></tr>
             ) : filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: 100, color: 'var(--color-text-3)' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 100, color: 'var(--color-text-3)' }}>
                   <CheckCircle size={60} style={{ margin: '0 auto 20px', opacity: 0.2 }} />
-                  <h3>Nada pendente para produção.</h3>
+                  <h3>Fila de espera vazia.</h3>
                 </td>
               </tr>
             ) : filteredItems.map((item, index) => {
@@ -170,9 +195,11 @@ export default function ProductionQueuePage() {
                     </div>
                   </td>
                   <td>
+                    {item.order.isPriority && <Zap size={16} fill="var(--color-warning)" stroke="var(--color-warning)" />}
+                  </td>
+                  <td>
                     <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--color-primary)' }}>#{item.order.orderNumber}</div>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{item.quantity}x {item.productName}</div>
-                    {item.customization && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>Obs: {item.customization}</div>}
                   </td>
                   <td>{item.order.client.name}</td>
                   <td>
@@ -181,24 +208,20 @@ export default function ProductionQueuePage() {
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: 12, border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: 10, border: '1px solid var(--color-border)' }}>
                       <input 
                         type="number"
                         className="form-input" 
-                        style={{ width: 60, height: 32, textAlign: 'center', fontSize: 16, fontWeight: 800, padding: 0 }}
+                        style={{ width: 50, height: 28, textAlign: 'center', fontSize: 14, fontWeight: 800, padding: 0 }}
                         value={startQuantities[item.id] || 0}
                         onChange={(e) => handleQtyChange(item.id, e.target.value, item.quantity)}
                       />
-                      <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>/ {item.quantity}</span>
+                      <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>/ {item.quantity}</span>
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <button 
-                      className="btn btn-warning" 
-                      onClick={() => handleStartProduction(item.id)}
-                      style={{ padding: '8px 16px', borderRadius: 10, fontWeight: 800, color: 'black', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, margin: '0 auto' }}
-                    >
-                      <Play size={14} fill="currentColor" /> LANÇAR
+                    <button className="btn btn-warning" onClick={() => handleStartProduction(item.id)} style={{ padding: '6px 12px', borderRadius: 8, fontWeight: 800, color: 'black', fontSize: 11 }}>
+                      <Play size={14} fill="black" /> LANÇAR
                     </button>
                   </td>
                 </tr>
@@ -207,6 +230,45 @@ export default function ProductionQueuePage() {
           </tbody>
         </table>
       </div>
+
+      {/* MODAL LANÇAMENTO MANUAL/ESTOQUE */}
+      {showManual && (
+        <div className="modal-overlay" onClick={() => setShowManual(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+             <div className="modal-header">
+                <h2 className="modal-title">Lançamento de Estoque</h2>
+                <button className="btn btn-ghost" onClick={() => setShowManual(false)}><X size={20}/></button>
+             </div>
+             <div className="modal-body">
+                <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 20 }}>
+                  Inicie uma produção manual independente de pedidos. O sistema alocalá estas peças automaticamente na Embalagem.
+                </p>
+                <div className="form-group">
+                  <label className="form-label">Produto / Modelo</label>
+                  <select className="form-input" value={manualForm.productId} onChange={e => setManualForm({...manualForm, productId: e.target.value})}>
+                    <option value="">Selecione...</option>
+                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Quantidade para Criar</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    min="1" 
+                    value={manualForm.quantity}
+                    onChange={e => setManualForm({...manualForm, quantity: parseInt(e.target.value) || 1})}
+                  />
+                </div>
+             </div>
+             <div className="modal-footer">
+                <button className="btn btn-primary w-full" style={{ padding: 14 }} onClick={handleManualLaunch}>
+                  <Package size={18} /> INICIAR PRODUÇÃO DESVINCULADA
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -42,7 +42,9 @@ model Order {
   deliveryDate    DateTime
   notes           String?
   status          OrderStatus @default(PENDING)
+  isPriority      Boolean     @default(false)
   createdAt       DateTime    @default(now())
+
   updatedAt       DateTime    @updatedAt
 
   client          Client      @relation(fields: [clientId], references: [id])
@@ -55,7 +57,8 @@ model Order {
 // ==================== ITENS/PEÇAS DO PEDIDO ====================
 model OrderItem {
   id              String      @id @default(uuid())
-  orderId         String
+  orderId         String?
+
   productId       String      // ID do produto cadastrado no catálogo
   productName     String      // Nome copiado para histórico
   customization   String?     
@@ -64,11 +67,13 @@ model OrderItem {
   priorityRank    Int         @default(0)
   isStarted       Boolean     @default(false)
   isPicked        Boolean     @default(false)
+  isStock         Boolean     @default(false)
+
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order           Order?      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product         Product     @relation(fields: [productId], references: [id])
   productionSteps ProductionStep[]
   stockMovements  StockMovement[]

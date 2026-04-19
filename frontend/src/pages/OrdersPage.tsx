@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Eye, X, Share2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Eye, X, Share2, Star } from 'lucide-react';
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -310,6 +310,17 @@ export default function OrdersPage() {
     });
   };
 
+  const handleTogglePriority = async (order: Order) => {
+    try {
+      await api.patch(`/orders/${order.id}/priority`, { isPriority: !order.isPriority });
+      toast.success(order.isPriority ? 'Prioridade removida' : 'Pedido marcado como prioritário! ⭐');
+      fetchOrders();
+    } catch (err) {
+      toast.error('Erro ao mudar prioridade');
+    }
+  };
+
+
   return (
 
     <div>
@@ -341,7 +352,9 @@ export default function OrdersPage() {
           <thead>
             <tr>
               <th>Status</th>
+              <th>⭐</th>
               <th>No. Pedido</th>
+
               <th>Cliente</th>
               <th>Peças / Modelos</th>
               <th>Total Itens</th>
@@ -369,7 +382,17 @@ export default function OrdersPage() {
                     {ORDER_STATUS_LABELS[order.status] || order.status}
                   </span>
                 </td>
-                <td style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{order.orderNumber}</td>
+                 <td>
+                   <button 
+                    className="btn btn-ghost btn-sm" 
+                    onClick={() => handleTogglePriority(order)}
+                    style={{ color: order.isPriority ? 'var(--color-warning)' : 'var(--color-text-3)' }}
+                   >
+                     <Star size={18} fill={order.isPriority ? 'currentColor' : 'none'} />
+                   </button>
+                 </td>
+                 <td style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{order.orderNumber}</td>
+
                 <td>{order.client.name}</td>
                 <td>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>

@@ -20,8 +20,10 @@ export interface Order {
   status: OrderStatus;
   items: OrderItem[];
   alerts?: Alert[];
+  isPriority: boolean;
   createdAt: string;
 }
+
 
 export interface OrderItem {
   id: string;
