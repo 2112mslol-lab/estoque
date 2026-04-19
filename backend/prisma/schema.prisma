@@ -38,7 +38,7 @@ enum OrderStatus {
 model Order {
   id              String      @id @default(uuid())
   orderNumber     String      @unique
-  clientId        String
+  clientId        String?
   deliveryDate    DateTime
   notes           String?
   status          OrderStatus @default(PENDING)
@@ -47,7 +47,8 @@ model Order {
 
   updatedAt       DateTime    @updatedAt
 
-  client          Client      @relation(fields: [clientId], references: [id])
+  client          Client?     @relation(fields: [clientId], references: [id])
+
   items           OrderItem[]
   alerts          Alert[]
 

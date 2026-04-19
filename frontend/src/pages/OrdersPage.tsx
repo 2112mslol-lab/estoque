@@ -76,8 +76,8 @@ function CreateOrderModal({ order, onClose, onSaved }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.clientId) return toast.error('Selecione um cliente');
     if (items.some(i => !i.productId)) return toast.error('Selecione o modelo de todas as peças');
+
     
     setLoading(true);
     try {
@@ -109,13 +109,13 @@ function CreateOrderModal({ order, onClose, onSaved }: {
           <div className="modal-body">
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label">Cliente *</label>
+                <label className="form-label">Cliente (Opcional)</label>
                 <select 
                   className="form-input" 
                   value={form.clientId} 
                   onChange={e => setForm({ ...form, clientId: e.target.value })}
-                  required
                 >
+
                   <option value="">Selecione um cliente...</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -223,7 +223,8 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
         <div className="modal-body">
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 4 }}>CLIENTE</div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{order.client.name}</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{order.client?.name || 'Venda Avulsa / Estoque'}</div>
+
           </div>
           
           <div style={{ marginBottom: 20 }}>
@@ -305,9 +306,10 @@ export default function OrdersPage() {
 
   const filtered = orders.filter(o => 
     o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-    o.client.name.toLowerCase().includes(search.toLowerCase()) ||
+    (o.client?.name || '').toLowerCase().includes(search.toLowerCase()) ||
     o.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()))
   );
+
 
   const handleShareTracking = (order: Order) => {
     const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
@@ -404,7 +406,8 @@ export default function OrdersPage() {
                  </td>
                  <td style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{order.orderNumber}</td>
 
-                <td>{order.client.name}</td>
+                 <td>{order.client?.name || <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>👤 Venda Avulsa / Estoque</span>}</td>
+
                 <td>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {order.items.map((item, idx) => (

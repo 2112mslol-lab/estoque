@@ -93,9 +93,10 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
         </span>
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
-        {step.item?.order?.client?.name}
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12, fontWeight: step.item?.order?.client?.name ? 500 : 800 }}>
+        {step.item?.order?.client?.name || (step.item?.isStock ? '📦 Produção Livre' : '👤 Venda Avulsa')}
       </div>
+
 
       {/* Barra de Progresso do Item */}
       <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, marginBottom: 12, overflow: 'hidden' }}>

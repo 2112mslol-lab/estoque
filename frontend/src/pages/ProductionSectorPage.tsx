@@ -175,8 +175,11 @@ export default function ProductionSectorPage() {
 
               <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 10, marginBottom: 20 }}>
                 <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 4 }}>CLIENTE</div>
-                <div style={{ fontWeight: 600 }}>{step.item?.order?.client?.name}</div>
+                <div style={{ fontWeight: 600, color: step.item?.order?.client?.name ? 'inherit' : 'var(--color-warning)', fontSize: step.item?.order?.client?.name ? 14 : 11 }}>
+                  {step.item?.order?.client?.name || (step.item?.isStock ? '📦 PRODUÇÃO LIVRE (ESTOQUE)' : '👤 VENDA AVULSA / SEM CLIENTE')}
+                </div>
               </div>
+
 
               {step.notes && (
                 <div style={{ fontSize: 12, color: 'var(--color-warning)', background: 'rgba(245, 158, 11, 0.05)', padding: 12, borderRadius: 10, marginBottom: 20 }}>
