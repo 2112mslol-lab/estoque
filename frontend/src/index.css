@@ -195,10 +195,11 @@ h1, h2, h3, .logo-text {
 .main-content {
   flex: 1;
   padding: 32px;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden; /* Evita scroll na página inteira, deixa para os componentes */
 }
+
 
 /* Page Header */
 .page-header {
@@ -356,10 +357,31 @@ tr:hover td {
 /* Kanban Flow */
 .kanban-board {
   display: flex;
-  gap: 20px;
-  padding-bottom: 24px;
+  gap: 24px;
+  padding: 10px 0 30px 0;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+  min-height: calc(100vh - 180px);
 }
+
+.kanban-board::-webkit-scrollbar {
+  height: 8px;
+}
+
+.kanban-board::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-board::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 10px;
+}
+
+.kanban-board::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
 
 .kanban-column {
   width: 300px;
@@ -567,16 +589,22 @@ tr:hover td {
   .mobile-nav {
     display: block;
   }
-  .main-content {
-    padding: 20px;
-    padding-bottom: 80px; /* Espaço para a mobile nav */
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
   }
+  .page-title {
+    font-size: 1.5rem;
+  }
+  .main-content {
+    padding: 16px;
+    padding-bottom: 90px;
+  }
+
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
-  .grid-2, .grid-3, .grid-4 {
     grid-template-columns: 1fr;
   }
   .page-title {
