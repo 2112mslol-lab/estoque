@@ -48,12 +48,24 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
   const isDelayed = step.status === 'IN_PROGRESS' && elapsedMin > step.estimatedMinutes;
   const deliveryDate = step.item?.order?.deliveryDate ? new Date(step.item.order.deliveryDate) : null;
   const hasUrgency = step.item?.order?.alerts?.some((a: any) => a.type === 'DEADLINE_APPROACHING');
+  
+  // Cálculo de Inteligência: Facilidade de Finalização
+  const completionPercent = step.item?.productionSteps 
+    ? (step.item.productionSteps.filter((s: any) => s.status === 'COMPLETED').length / step.item.productionSteps.length) * 100 
+    : 0;
+  
+  const isQuickWin = completionPercent >= 75;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`kanban-card ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''}`}
+      className={`kanban-card ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''} ${isQuickWin ? 'quick-win' : ''}`}
+      style={{
+        ...style,
+        borderTop: isQuickWin ? '4px solid #10b981' : undefined,
+        boxShadow: isQuickWin ? '0 0 15px rgba(16, 185, 129, 0.2)' : undefined
+      } as any}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -61,7 +73,8 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
             <span style={{ fontSize: 13, fontWeight: 700, color: hasUrgency ? 'var(--color-danger)' : 'var(--color-primary)' }}>
               {step.item?.order?.orderNumber}
             </span>
-            {hasUrgency && <span style={{ fontSize: 8, background: 'var(--color-danger)', color: 'white', padding: '1px 4px', borderRadius: 4, fontWeight: 800 }}>URGENTE</span>}
+            {hasUrgency && <span style={{ fontSize: 8, background: 'var(--color-danger)', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>URGENTE</span>}
+            {isQuickWin && <span style={{ fontSize: 8, background: '#10b981', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>QUASE PRONTO</span>}
           </div>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>
             {step.item?.quantity}x {step.item?.productName}
@@ -74,6 +87,11 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
 
       <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
         {step.item?.order?.client?.name}
+      </div>
+
+      {/* Barra de Progresso do Item */}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, marginBottom: 12, overflow: 'hidden' }}>
+         <div style={{ height: '100%', background: isQuickWin ? '#10b981' : 'var(--color-primary)', width: `${completionPercent}%`, transition: 'width 0.5s ease' }}></div>
       </div>
       
       {deliveryDate && (
@@ -91,27 +109,17 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
       )}
 
       <div className="card-footer" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {step.status === 'PENDING' ? (
-            <button className="btn btn-primary btn-sm" onClick={() => onUpdate(step.id, 'IN_PROGRESS')} style={{ padding: '4px 10px', fontSize: 11 }}>
-              🚀 Iniciar
-            </button>
-          ) : (
-            <button className="btn btn-success btn-sm" onClick={() => onUpdate(step.id, 'COMPLETED')} style={{ padding: '4px 10px', fontSize: 11 }}>
-              ✅ Próxima Etapa
-            </button>
-          )}
+        <div style={{ fontSize: 11, fontWeight: 700 }}>
+           {step.completedQuantity} / {step.item?.quantity} un
         </div>
         <div style={{ textAlign: 'right' }}>
            <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4, display: 'block', color: isDelayed ? 'var(--color-danger)' : 'inherit' }}>
-            {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : STEP_STATUS_LABELS[step.status]}
-          </span>
-          <span style={{ fontSize: 9, color: 'var(--color-text-3)' }}>
-            Meta: {step.estimatedMinutes}m
+            {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : 'Aguardando'}
           </span>
         </div>
       </div>
     </div>
+
   );
 }
 

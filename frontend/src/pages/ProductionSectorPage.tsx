@@ -2,17 +2,17 @@ import { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { 
   Clock, 
-  AlertTriangle,
   RefreshCw,
   Package,
   CheckCircle2,
-  PlayCircle
+  PlayCircle,
+  Hash
 } from 'lucide-react';
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import type { ProductionStep, StepName, StepStatus } from '../types';
+import type { ProductionStep, StepName } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS } from '../types';
 import api from '../services/api';
 
@@ -24,11 +24,9 @@ export default function ProductionSectorPage() {
   const stepName = sector?.toUpperCase() || '';
   const label = STEP_LABELS[stepName] || sector || 'Setor';
 
-
   const fetchSteps = async () => {
     try {
       const res = await api.get('/production/kanban');
-      // Filtramos apenas as etapas DESTE setor
       const filtered = res.data.filter((s: ProductionStep) => s.stepName === stepName);
       setSteps(filtered);
     } finally {
@@ -42,26 +40,24 @@ export default function ProductionSectorPage() {
     return () => clearInterval(interval);
   }, [sector]);
 
-  const handleUpdateStatus = async (id: string, status: StepStatus) => {
+  const handleUpdatePartial = async (id: string, completedQuantity: number) => {
     try {
-      await api.put(`/production/steps/${id}`, { status });
-      toast.success(status === 'IN_PROGRESS' ? 'Peça iniciada!' : 'Peça enviada para o próximo setor!');
+      await api.put(`/production/steps/${id}`, { completedQuantity });
+      toast.success('Progresso atualizado!');
       fetchSteps();
     } catch (err) {
-      toast.error('Erro ao atualizar status');
+      toast.error('Erro ao atualizar progresso');
     }
   };
 
   return (
     <div className="fade-in">
       <div className="page-header" style={{ borderBottom: `4px solid ${STEP_COLORS[stepName] || 'var(--color-primary)'}`, paddingBottom: 20 }}>
-
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: '1.5em' }}>{STEP_EMOJIS[stepName] || '🛠️'}</span>
             Setor de {label}
           </h1>
-
           <p className="page-subtitle">Pilha de trabalho atual e prioridades</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -89,29 +85,36 @@ export default function ProductionSectorPage() {
           const isDelayed = step.status === 'IN_PROGRESS' && elapsedMin > step.estimatedMinutes;
           const deliveryDate = step.item?.order?.deliveryDate ? new Date(step.item.order.deliveryDate) : null;
           const hasUrgency = step.item?.order?.alerts?.some((a: any) => a.type === 'DEADLINE_APPROACHING');
+          const completionPercent = (step.completedQuantity / step.item.quantity) * 100;
 
           return (
-            <div 
-              key={step.id} 
-              className={`card shadow-premium ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''}`}
-              style={{ position: 'relative', overflow: 'hidden' }}
-            >
+            <div key={step.id} className={`card shadow-premium ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+              
+              <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: STEP_COLORS[stepName] || 'var(--color-primary)', width: `${completionPercent}%`, transition: 'width 0.5s ease' }} />
+
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: hasUrgency ? 'var(--color-danger)' : 'var(--color-primary)' }}>
-                            {step.item?.order?.orderNumber}
-                        </span>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: hasUrgency ? 'var(--color-danger)' : 'var(--color-primary)' }}>#{step.item?.order?.orderNumber}</span>
                         {hasUrgency && <span className="badge badge-danger" style={{ fontSize: 9 }}>URGENTE</span>}
                    </div>
-                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)' }}>
-                        {step.item?.quantity}x {step.item?.productName}
-                   </div>
+                   <div style={{ fontSize: 14, fontWeight: 700 }}>{step.item?.productName}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>TÉCNICO</div>
                     <div style={{ fontSize: 12, fontWeight: 700 }}>{step.assignedTo || '---'}</div>
                 </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>PRODUZIDO</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-primary)' }}>{step.completedQuantity} <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 400 }}>de {step.item.quantity}</span></div>
+                 </div>
+                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>PROGRESSO</div>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>{Math.round(completionPercent)}%</div>
+                 </div>
               </div>
 
               <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 10, marginBottom: 20 }}>
@@ -120,45 +123,48 @@ export default function ProductionSectorPage() {
               </div>
 
               {step.notes && (
-                <div style={{ fontSize: 12, color: 'var(--color-warning)', background: 'rgba(245, 158, 11, 0.05)', padding: 12, borderRadius: 10, marginBottom: 20, borderLeft: '3px solid var(--color-warning)' }}>
+                <div style={{ fontSize: 12, color: 'var(--color-warning)', background: 'rgba(245, 158, 11, 0.05)', padding: 12, borderRadius: 10, marginBottom: 20 }}>
                     <strong>Obs:</strong> {step.notes}
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 24 }}>
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: isDelayed || hasUrgency ? 'var(--color-danger)' : 'var(--color-text-2)', marginBottom: 16 }}>
-                        <Clock size={14} />
-                        <span>Entrega: {deliveryDate ? format(deliveryDate, "dd/MM 'às' HH:mm", { locale: ptBR }) : '---'}</span>
-                    </div>
-
-                    {step.status === 'PENDING' ? (
-                        <button className="btn btn-primary" onClick={() => handleUpdateStatus(step.id, 'IN_PROGRESS')} style={{ padding: '12px 24px' }}>
-                            <PlayCircle size={18} /> Iniciar Trabalho
-                        </button>
-                    ) : (
-                        <button className="btn btn-success" onClick={() => handleUpdateStatus(step.id, 'COMPLETED')} style={{ padding: '12px 24px' }}>
-                            <CheckCircle2 size={18} /> Concluir e Passar
-                        </button>
-                    )}
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 4 }}>TEMPO</div>
-                   <div style={{ 
-                        fontSize: 20, 
-                        fontWeight: 800, 
-                        color: isDelayed ? 'var(--color-danger)' : 'var(--color-text-1)' 
-                   }}>
-                        {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)}m` : '0m'}
-                   </div>
-                   <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>Meta: {step.estimatedMinutes}m</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                 <div style={{ flex: 1, position: 'relative' }}>
+                    <input 
+                      type="number" 
+                      className="input" 
+                      min="0"
+                      max={step.item.quantity}
+                      placeholder="Qtd atual..."
+                      defaultValue={step.completedQuantity}
+                      onBlur={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val) && val !== step.completedQuantity) handleUpdatePartial(step.id, val);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const val = parseInt((e.target as HTMLInputElement).value);
+                          if (!isNaN(val)) handleUpdatePartial(step.id, val);
+                        }
+                      }}
+                      style={{ paddingLeft: 34 }}
+                    />
+                    <Hash size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-3)' }} />
+                 </div>
+                 <button className="btn btn-success" onClick={() => handleUpdatePartial(step.id, step.item.quantity)} title="Finalizar tudo">
+                    <CheckCircle2 size={18} />
+                 </button>
               </div>
 
-              {step.status === 'IN_PROGRESS' && (
-                <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: isDelayed ? 'var(--color-danger)' : 'var(--color-primary)', width: `${Math.min((elapsedMin / step.estimatedMinutes) * 100, 100)}%`, transition: 'width 1s ease' }} />
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-3)' }}>
+                    <Clock size={14} />
+                    <span>Entrega: {deliveryDate ? format(deliveryDate, "dd/MM", { locale: ptBR }) : '---'}</span>
+                 </div>
+                 <div style={{ fontSize: 11, color: isDelayed ? 'var(--color-danger)' : 'var(--color-text-3)' }}>
+                    Meta: {step.estimatedMinutes}m
+                 </div>
+              </div>
             </div>
           );
         })}

@@ -13,8 +13,10 @@ import {
   Archive,
   CheckSquare,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
+
 import { useSocket } from './hooks/useSocket';
 import { STEP_LABELS } from './types';
 
@@ -94,6 +96,11 @@ function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogo
               <Users size={20} />
               <span>Clientes</span>
             </NavLink>
+            <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Settings size={20} />
+              <span>Ajustes</span>
+            </NavLink>
+
           </>
         )}
         <NavLink to="/alerts" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
@@ -295,7 +302,9 @@ export default function App() {
                     <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
                     <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
                     <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
+                    <Route path="/settings" element={user?.role === 'ADMIN' ? <SettingsPage /> : <Navigate to="/" />} />
                     <Route path="/production/:sector" element={<ProductionSectorPage />} />
+
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import { StepStatus } from '@prisma/client';
+
 
 
 const router = Router();
@@ -17,7 +19,60 @@ router.get('/templates', async (_req, res) => {
   }
 });
 
+// ... (get routes)
+
+// POST /api/configs/templates - Criar novo template
+router.post('/templates', async (req, res) => {
+  try {
+    const { name, stepOrder, estimatedMinutes, color } = req.body;
+    const template = await prisma.productionStepTemplate.create({
+      data: { 
+        name: name.toUpperCase().replace(/\s+/g, '_'), 
+        stepOrder: parseInt(stepOrder), 
+        estimatedMinutes: parseInt(estimatedMinutes), 
+        color 
+      },
+    });
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao criar template' });
+  }
+});
+
+// PUT /api/configs/templates/:id - Atualizar template
+router.put('/templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, stepOrder, estimatedMinutes, color, isActive } = req.body;
+    const template = await prisma.productionStepTemplate.update({
+      where: { id },
+      data: { 
+        name: name?.toUpperCase().replace(/\s+/g, '_'), 
+        stepOrder: stepOrder !== undefined ? parseInt(stepOrder) : undefined, 
+        estimatedMinutes: estimatedMinutes !== undefined ? parseInt(estimatedMinutes) : undefined, 
+        color,
+        isActive
+      },
+    });
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar template' });
+  }
+});
+
+// DELETE /api/configs/templates/:id - Excluir template
+router.delete('/templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.productionStepTemplate.delete({ where: { id } });
+    res.json({ message: 'Template excluído' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao excluir template' });
+  }
+});
+
 router.use(authenticate);
+
 
 router.use(authorize(['ADMIN']));
 
