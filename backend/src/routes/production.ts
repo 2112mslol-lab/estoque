@@ -44,8 +44,11 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
       orderBy: { stepOrder: 'asc' }
     });
 
-    // Criar etapas e marcar como iniciado
+    // Criar etapas e marcar como iniciado (Limpando resquícios de tentativas anteriores)
     await prisma.$transaction([
+      prisma.productionStep.deleteMany({
+        where: { orderItemId: id }
+      }),
       prisma.productionStep.createMany({
         data: templates.map(t => ({
           orderItemId: id,
@@ -61,6 +64,7 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
         data: { isStarted: true, status: 'IN_PRODUCTION' }
       })
     ]);
+
 
     res.json({ message: 'Produção iniciada com sucesso' });
   } catch (error) {
