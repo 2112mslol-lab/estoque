@@ -186,5 +186,23 @@ router.patch('/:id/priority', authorize(['ADMIN']), async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/status - Atualizar STATUS rapidamente (APENAS ADMIN)
+router.patch('/:id/status', authorize(['ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    const order = await prisma.order.update({
+      where: { id },
+      data: { status },
+      include: { client: true, items: true }
+    });
+    io.emit('order:updated', order);
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar status' });
+  }
+});
+
+
 export default router;
 

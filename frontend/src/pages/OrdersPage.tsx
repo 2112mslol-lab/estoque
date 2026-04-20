@@ -4,9 +4,19 @@ import { Plus, Search, Edit2, Trash2, Eye, X, Share2, Star } from 'lucide-react'
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import type { Order, Client, Product } from '../types';
+import type { Order, Client, Product, OrderStatus } from '../types';
 import { ORDER_STATUS_LABELS } from '../types';
 import api from '../services/api';
+
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: '#ef4444',
+  IN_PRODUCTION: '#f59e0b',
+  FINISHED: '#3b82f6',
+  WAITING_CONFIRMATION: '#f97316',
+  SHIPPED: '#a855f7',
+  DELIVERED: '#10b981',
+  CANCELLED: '#64748b',
+};
 
 interface OrderItemForm {
   productId: string;
@@ -77,7 +87,6 @@ function CreateOrderModal({ order, onClose, onSaved }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.some(i => !i.productId)) return toast.error('Selecione o modelo de todas as peças');
-
     
     setLoading(true);
     try {
@@ -115,7 +124,6 @@ function CreateOrderModal({ order, onClose, onSaved }: {
                   value={form.clientId} 
                   onChange={e => setForm({ ...form, clientId: e.target.value })}
                 >
-
                   <option value="">Selecione um cliente...</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -224,7 +232,6 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 4 }}>CLIENTE</div>
             <div style={{ fontWeight: 700, fontSize: 16 }}>{order.client?.name || 'Venda Avulsa / Estoque'}</div>
-
           </div>
           
           <div style={{ marginBottom: 20 }}>
@@ -240,13 +247,11 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
                       borderRadius: 6,
                       fontWeight: 800,
                       background: 'rgba(255,255,255,0.03)',
-                      color: item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-danger)' : 'var(--color-warning)'),
-                      border: `1px solid ${item.status === 'COMPLETED' ? 'var(--color-success)' : (item.status === 'WAITING' ? 'var(--color-danger)' : 'var(--color-warning)')}`
-
+                      color: STATUS_COLORS[item.status as string] || 'var(--color-primary)',
+                      border: `1px solid ${STATUS_COLORS[item.status as string] || 'var(--color-primary)'}`
                     }}>
                       {ORDER_STATUS_LABELS[item.status] || item.status}
                     </span>
-
                   </div>
                   {item.customization && <div style={{ fontSize: 12, color: 'var(--color-text-2)', fontStyle: 'italic' }}>Obs: {item.customization}</div>}
                 </div>
@@ -304,12 +309,21 @@ export default function OrdersPage() {
     setShowModal(true);
   };
 
+  const handleUpdateStatus = async (id: string, status: OrderStatus) => {
+    try {
+      await api.patch(`/orders/${id}/status`, { status });
+      toast.success('Status atualizado!');
+      fetchOrders();
+    } catch (err) {
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
   const filtered = orders.filter(o => 
     o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
     (o.client?.name || '').toLowerCase().includes(search.toLowerCase()) ||
     o.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()))
   );
-
 
   const handleShareTracking = (order: Order) => {
     const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
@@ -334,19 +348,18 @@ export default function OrdersPage() {
 
 
   return (
-
-    <div>
+    <div className="fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Entrada de Produção</h1>
-          <p className="page-subtitle">{orders.length} pedidos em fluxo</p>
+          <h1 className="page-title">Gestão de Pedidos & Logística</h1>
+          <p className="page-subtitle">{orders.length} pedidos em fluxo operacional</p>
         </div>
         <button className="btn btn-primary" onClick={handleOpenCreate}>
           <Plus size={16} /> Nova Produção
         </button>
       </div>
 
-      <div className="card mb-6">
+      <div className="card mb-6 shadow-premium">
         <div style={{ position: 'relative', maxWidth: 400 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-3)' }} />
           <input 
@@ -359,41 +372,49 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className="table-container">
-        <table>
+      <div className="table-container shadow-premium">
+        <table style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
           <thead>
             <tr>
-              <th>Status</th>
-              <th>⭐</th>
-              <th>No. Pedido</th>
-
+              <th style={{ width: 180 }}>📍 Status Logístico</th>
+              <th style={{ width: 40 }}>⭐</th>
+              <th style={{ width: 120 }}>No. Pedido</th>
               <th>Cliente</th>
-              <th>Peças / Modelos</th>
-              <th>Total Itens</th>
-              <th>Entrega Prevista</th>
-              <th>Criado em</th>
-              <th>Ações</th>
+              <th>Peça / Quantidade</th>
+              <th style={{ width: 100 }}>Entrega</th>
+              <th style={{ width: 120 }}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}>Carregando...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}>Sincronizando logistica...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>Sem peças em produção no momento</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>Nenhum pedido em fluxo agora.</td></tr>
             ) : filtered.map(order => (
-              <tr key={order.id}>
+              <tr key={order.id} style={{ background: 'rgba(255,255,255,0.01)' }}>
                 <td>
-                   <span style={{ 
-                    padding: '4px 10px', 
-                    border: '1px solid currentColor',
-                    borderRadius: 6, 
-                    fontSize: 11, 
-                    fontWeight: 800,
-                    color: order.status === 'PENDING' ? 'var(--color-danger)' : (order.status === 'COMPLETED' || order.status === 'FINISHED' ? 'var(--color-success)' : 'var(--color-warning)')
-                  }}>
-                    {ORDER_STATUS_LABELS[order.status] || order.status}
-                  </span>
-
+                   <select 
+                     value={order.status}
+                     onChange={(e) => handleUpdateStatus(order.id, e.target.value as OrderStatus)}
+                     style={{ 
+                       background: STATUS_COLORS[order.status] || 'var(--color-surface-3)',
+                       color: 'white',
+                       border: 'none',
+                       borderRadius: 6,
+                       fontSize: 11,
+                       fontWeight: 800,
+                       padding: '4px 8px',
+                       cursor: 'pointer',
+                       width: '100%',
+                       textTransform: 'uppercase'
+                     }}
+                   >
+                     {Object.entries(ORDER_STATUS_LABELS).map(([val, label]) => (
+                       <option key={val} value={val} style={{ background: 'var(--color-surface-2)', color: 'white' }}>
+                         {label}
+                       </option>
+                     ))}
+                   </select>
                 </td>
                  <td>
                    <button 
@@ -404,30 +425,27 @@ export default function OrdersPage() {
                      <Star size={18} fill={order.isPriority ? 'currentColor' : 'none'} />
                    </button>
                  </td>
-                 <td style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{order.orderNumber}</td>
+                 <td style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{order.orderNumber}</td>
 
-                 <td>{order.client?.name || <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>👤 Venda Avulsa / Estoque</span>}</td>
-
+                 <td style={{ fontWeight: 600 }}>
+                   {order.client?.name || <span style={{ color: 'var(--color-text-3)', fontSize: 11, fontWeight: 400 }}>📦 Venda Avulsa / Estoque</span>}
+                 </td>
+                
                 <td>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {order.items.map((item, idx) => (
-                      <span key={idx} style={{ 
-                        fontSize: 11, 
-                        background: 'rgba(255,255,255,0.05)', 
-                        padding: '2px 8px', 
-                        borderRadius: 4,
-                        border: '1px solid var(--color-border)'
-                      }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {order.items.slice(0, 2).map((item, idx) => (
+                      <div key={idx} style={{ fontSize: 12, fontWeight: 700 }}>
                         {item.quantity}x {item.productName}
-                      </span>
+                      </div>
                     ))}
+                    {order.items.length > 2 && <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>+ {order.items.length - 2} itens...</div>}
                   </div>
                 </td>
-                <td style={{ textAlign: 'center' }}>
-                  {order.items.reduce((acc, i) => acc + i.quantity, 0)}
+
+                <td style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-warning)' }}>
+                   {format(new Date(order.deliveryDate), "dd/MM", { locale: ptBR })}
                 </td>
-                <td style={{ fontWeight: 600 }}>{format(new Date(order.deliveryDate), "dd/MM/yyyy", { locale: ptBR })}</td>
-                <td style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{format(new Date(order.createdAt), "dd/MM - HH:mm", { locale: ptBR })}</td>
+
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className="btn btn-ghost btn-sm" title="Rastreio Público" style={{ color: 'var(--color-primary)' }} onClick={() => handleShareTracking(order)}><Share2 size={16} /></button>
@@ -435,7 +453,6 @@ export default function OrdersPage() {
                     <button className="btn btn-ghost btn-sm" title="Editar" onClick={() => handleEdit(order)}><Edit2 size={16} /></button>
                     <button className="btn btn-ghost btn-sm" title="Excluir" style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(order.id, order.orderNumber)}><Trash2 size={14} /></button>
                   </div>
-
                 </td>
               </tr>
             ))}

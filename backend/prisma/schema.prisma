@@ -31,9 +31,12 @@ enum OrderStatus {
   PENDING
   IN_PRODUCTION
   FINISHED
+  WAITING_CONFIRMATION
+  SHIPPED
   DELIVERED
   CANCELLED
 }
+
 
 model Order {
   id              String      @id @default(uuid())

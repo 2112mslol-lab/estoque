@@ -153,9 +153,11 @@ export const UNIT_LABELS: Record<string, string> = {
 };
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pendente',
+  PENDING: 'Aguardando',
   IN_PRODUCTION: 'Em Produção',
-  FINISHED: 'Finalizado',
+  FINISHED: 'Pronto',
+  WAITING_CONFIRMATION: 'Aguard. Confirmação',
+  SHIPPED: 'Saiu para Entrega',
   DELIVERED: 'Entregue',
   CANCELLED: 'Cancelado',
 };
