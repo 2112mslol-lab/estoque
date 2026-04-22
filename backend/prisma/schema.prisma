@@ -55,6 +55,7 @@ model Order {
   items           OrderItem[]
   alerts          Alert[]
 
+  @@index([status, deliveryDate])
   @@map("orders")
 }
 
@@ -146,6 +147,7 @@ model ProductionStep {
   template        ProductionStepTemplate? @relation(fields: [stepTemplateId], references: [id])
 
   @@unique([orderItemId, stepName])
+  @@index([status, stepName])
   @@map("production_steps")
 }
 

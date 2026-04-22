@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import api from './services/api';
@@ -20,19 +20,20 @@ import {
 import { useSocket } from './hooks/useSocket';
 import { STEP_LABELS } from './types';
 
-import DashboardPage from './pages/DashboardPage';
-import OrdersPage from './pages/OrdersPage';
-import KanbanPage from './pages/KanbanPage';
-import ProductsPage from './pages/ProductsPage';
-import AlertsPage from './pages/AlertsPage';
-import ClientsPage from './pages/ClientsPage';
-import LoginPage from './pages/LoginPage';
-import StockItemsPage from './pages/StockItemsPage';
-import OrderControlPage from './pages/OrderControlPage';
-import ProductionSectorPage from './pages/ProductionSectorPage';
-import PublicTrackingPage from './pages/PublicTrackingPage';
-import SettingsPage from './pages/SettingsPage';
-import ProductionQueuePage from './pages/ProductionQueuePage';
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const KanbanPage = lazy(() => import('./pages/KanbanPage'));
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const AlertsPage = lazy(() => import('./pages/AlertsPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const StockItemsPage = lazy(() => import('./pages/StockItemsPage'));
+const OrderControlPage = lazy(() => import('./pages/OrderControlPage'));
+const ProductionSectorPage = lazy(() => import('./pages/ProductionSectorPage'));
+const PublicTrackingPage = lazy(() => import('./pages/PublicTrackingPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ProductionQueuePage = lazy(() => import('./pages/ProductionQueuePage'));
+
 
 
 
@@ -285,48 +286,50 @@ export default function App() {
   return (
     <BrowserRouter>
       {/* Rotas Públicas Externas (Layout sem Sidebar) */}
-      <Routes>
-        <Route path="/tracking/:id" element={<PublicTrackingPage />} />
-        
-        {/* Rota Raiz que decide entre Login ou App */}
-        <Route 
-          path="/*" 
-          element={
-            !user ? (
-              <>
-                <LoginPage onLogin={setUser} />
-                <Toaster position="top-right" />
-              </>
-            ) : (
-              <div className="app-container">
-                <Sidebar alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
-                
-                <main className="main-content">
-                  <Routes>
-                    <Route path="/" element={<DashboardPage />} />
-                    <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
-                    <Route path="/production-queue" element={user?.role === 'ADMIN' ? <ProductionQueuePage /> : <Navigate to="/" />} />
+      <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100vw', background: 'var(--color-bg)', color: 'var(--color-text)' }}>Carregando sistema...</div>}>
+        <Routes>
+          <Route path="/tracking/:id" element={<PublicTrackingPage />} />
+          
+          {/* Rota Raiz que decide entre Login ou App */}
+          <Route 
+            path="/*" 
+            element={
+              !user ? (
+                <>
+                  <LoginPage onLogin={setUser} />
+                  <Toaster position="top-right" />
+                </>
+              ) : (
+                <div className="app-container">
+                  <Sidebar alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
+                  
+                  <main className="main-content">
+                    <Routes>
+                      <Route path="/" element={<DashboardPage />} />
+                      <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
+                      <Route path="/production-queue" element={user?.role === 'ADMIN' ? <ProductionQueuePage /> : <Navigate to="/" />} />
 
-                    <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
-                    <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
-                    <Route path="/kanban" element={<KanbanPage />} />
-                    <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
-                    <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
-                    <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
-                    <Route path="/settings" element={user?.role === 'ADMIN' ? <SettingsPage /> : <Navigate to="/" />} />
-                    <Route path="/production/:sector" element={<ProductionSectorPage />} />
+                      <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
+                      <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
+                      <Route path="/kanban" element={<KanbanPage />} />
+                      <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
+                      <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
+                      <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
+                      <Route path="/settings" element={user?.role === 'ADMIN' ? <SettingsPage /> : <Navigate to="/" />} />
+                      <Route path="/production/:sector" element={<ProductionSectorPage />} />
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </main>
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </main>
 
-                <MobileNav alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
-                <Toaster position="top-right" />
-              </div>
-            )
-          } 
-        />
-      </Routes>
+                  <MobileNav alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
+                  <Toaster position="top-right" />
+                </div>
+              )
+            } 
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

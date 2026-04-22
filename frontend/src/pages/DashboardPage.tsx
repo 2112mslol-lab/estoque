@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   AlertTriangle, 
   Clock, 
@@ -64,12 +64,14 @@ function StatCard({ icon, label, value, accent, sub }: { icon: any, label: strin
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-
-  const fetchDashboard = async () => {
-    const res = await api.get<DashboardData>('/dashboard');
-    setData(res.data);
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const res = await api.get<DashboardData>('/dashboard');
+      return res.data;
+    },
+    refetchInterval: 60000,
+  });
 
   const handleShareTracking = (order: Order) => {
     const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
@@ -82,13 +84,7 @@ export default function DashboardPage() {
     });
   };
 
-  useEffect(() => {
-    fetchDashboard();
-    const interval = setInterval(fetchDashboard, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!data) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando métricas da fábrica...</div>;
+  if (isLoading || !data) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando métricas da fábrica...</div>;
 
   // Cálculo de Gargalo Crítico
   const bottleneck = data.avgTimeByStep

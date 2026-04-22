@@ -1,8 +1,16 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
+
+const ClientSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal(''))
+});
 
 router.use(authenticate);
 
@@ -42,14 +50,16 @@ router.get('/:id', async (req, res) => {
 // POST /api/clients (APENAS ADMIN)
 router.post('/', authorize(['ADMIN']), async (req, res) => {
   try {
-    const { name, email, phone, address } = req.body;
-    if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+    const validatedData = ClientSchema.parse(req.body);
 
     const client = await prisma.client.create({
-      data: { name, email, phone, address },
+      data: validatedData,
     });
     res.status(201).json(client);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
     res.status(500).json({ error: 'Erro ao criar cliente' });
   }
 });
@@ -57,13 +67,17 @@ router.post('/', authorize(['ADMIN']), async (req, res) => {
 // PUT /api/clients/:id (APENAS ADMIN)
 router.put('/:id', authorize(['ADMIN']), async (req, res) => {
   try {
-    const { name, email, phone, address } = req.body;
+    const validatedData = ClientSchema.parse(req.body);
+    
     const client = await prisma.client.update({
       where: { id: req.params.id },
-      data: { name, email, phone, address },
+      data: validatedData,
     });
     res.json(client);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
     res.status(500).json({ error: 'Erro ao atualizar cliente' });
   }
 });
