@@ -3,11 +3,21 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 
+import rateLimit from 'express-rate-limit';
+
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'estoque-toque-ideal-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Limite de 5 tentativas de login por IP
+  message: 'Muitas tentativas de login. Tente novamente após 15 minutos.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // POST /api/auth/login - Autenticação segura
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {

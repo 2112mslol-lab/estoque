@@ -7,6 +7,9 @@ import { StepStatus } from '@prisma/client';
 
 const router = Router();
 
+router.use(authenticate);
+router.use(authorize(['ADMIN']));
+
 // GET /api/configs/templates - Listar templates de etapas
 router.get('/templates', async (_req, res) => {
   try {
@@ -18,8 +21,6 @@ router.get('/templates', async (_req, res) => {
     res.status(500).json({ error: 'Erro ao buscar templates' });
   }
 });
-
-// ... (get routes)
 
 // POST /api/configs/templates - Criar novo template
 router.post('/templates', async (req, res) => {
@@ -70,11 +71,6 @@ router.delete('/templates/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao excluir template' });
   }
 });
-
-router.use(authenticate);
-
-
-router.use(authorize(['ADMIN']));
 
 
 // GET /api/configs/steps - Configurações das etapas

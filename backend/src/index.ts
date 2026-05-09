@@ -3,6 +3,8 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/auth';
 import clientRoutes from './routes/clients';
@@ -26,6 +28,18 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
+// Segurança: Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // Limite de 100 requisições por IP
+  message: 'Muitas requisições vindas deste IP, tente novamente após 15 minutos',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(limiter);
+app.use(helmet());
+
 // Funções para garantir que os usuários iniciais existam
 async function ensureInitialUsers() {
   try {
@@ -35,7 +49,8 @@ async function ensureInitialUsers() {
 
     if (!existingAdmin) {
       console.log('👷 Criando usuário administrador inicial...');
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'admin123';
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
       await prisma.user.create({
         data: {
           name: 'Administrador Toque Ideal',
@@ -53,7 +68,8 @@ async function ensureInitialUsers() {
 
     if (!existingEmployee) {
       console.log('👷 Criando usuário funcionário inicial...');
-      const hashedPassword = await bcrypt.hash('funcionario123', 10);
+      const employeePassword = process.env.INITIAL_EMPLOYEE_PASSWORD || 'funcionario123';
+      const hashedPassword = await bcrypt.hash(employeePassword, 10);
       await prisma.user.create({
         data: {
           name: 'Colaborador Toque Ideal',
@@ -85,8 +101,9 @@ const io = new Server(httpServer, {
 (global as any).io = io;
 
 // Middlewares
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(cors({
-  origin: true, // Permite qualquer origem em desenvolvimento (celular/tablet)
+  origin: process.env.NODE_ENV === 'production' ? allowedOrigin : true,
   credentials: true,
 }));
 app.use(express.json());
