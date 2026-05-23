@@ -15,6 +15,7 @@ router.get('/templates', async (_req, res) => {
   try {
     const templates = await prisma.productionStepTemplate.findMany({
       orderBy: { stepOrder: 'asc' },
+      include: { checklistItems: { orderBy: { createdAt: 'asc' } } }
     });
     res.json(templates);
   } catch (error) {
@@ -72,6 +73,34 @@ router.delete('/templates/:id', async (req, res) => {
   }
 });
 
+// POST /api/configs/templates/:id/checklists - Adicionar item de checklist ao template
+router.post('/templates/:id/checklists', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text, isMandatory } = req.body;
+    const item = await prisma.checklistItemTemplate.create({
+      data: {
+        text,
+        isMandatory: isMandatory ?? true,
+        stepTemplateId: id
+      }
+    });
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao adicionar item de checklist' });
+  }
+});
+
+// DELETE /api/configs/templates/checklists/:itemId - Excluir item de checklist
+router.delete('/templates/checklists/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    await prisma.checklistItemTemplate.delete({ where: { id: itemId } });
+    res.json({ message: 'Item excluído' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao excluir item de checklist' });
+  }
+});
 
 // GET /api/configs/steps - Configurações das etapas
 router.get('/steps', async (_req, res) => {

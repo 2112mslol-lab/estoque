@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import { STEP_LABELS } from '../types';
 
+interface ChecklistItemTemplate {
+  id: string;
+  text: string;
+  isMandatory: boolean;
+}
+
 interface Template {
   id: string;
   name: string;
@@ -20,6 +26,65 @@ interface Template {
   estimatedMinutes: number;
   color: string;
   isActive: boolean;
+  checklistItems?: ChecklistItemTemplate[];
+}
+
+function ChecklistManager({ template, onRefresh }: { template: Template, onRefresh: () => void }) {
+  const [newItemText, setNewItemText] = useState('');
+  const [isMandatory, setIsMandatory] = useState(true);
+
+  const handleAdd = async () => {
+    if (!newItemText) return;
+    try {
+      await api.post(`/configs/templates/${template.id}/checklists`, { text: newItemText, isMandatory });
+      setNewItemText('');
+      onRefresh();
+    } catch (e) {
+      toast.error('Erro ao adicionar item');
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    try {
+      await api.delete(`/configs/templates/checklists/${itemId}`);
+      onRefresh();
+    } catch (e) {
+      toast.error('Erro ao remover item');
+    }
+  };
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8 }}>
+      <h4 style={{ fontSize: 13, marginBottom: 12, color: 'var(--color-text-2)' }}>Itens de Checklist Padrão</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {template.checklistItems?.map(item => (
+          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: 6 }}>
+            <div style={{ fontSize: 12 }}>
+              {item.text} {item.isMandatory ? <span style={{ color: 'var(--color-danger)', marginLeft: 4 }}>* (Obrigatório)</span> : <span style={{ color: 'var(--color-text-3)', marginLeft: 4 }}>(Opcional)</span>}
+            </div>
+            <button className="btn btn-icon btn-ghost" onClick={() => handleDelete(item.id)}><Trash2 size={14} /></button>
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <input 
+            type="text" 
+            className="input" 
+            placeholder="Novo item de checklist..." 
+            value={newItemText} 
+            onChange={e => setNewItemText(e.target.value)}
+            style={{ flex: 1, padding: '6px 12px', fontSize: 12, height: 32 }}
+          />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+            <input type="checkbox" checked={isMandatory} onChange={e => setIsMandatory(e.target.checked)} />
+            Obrigatório
+          </label>
+          <button className="btn btn-primary" style={{ height: 32, padding: '0 12px', fontSize: 12 }} onClick={handleAdd}>
+            <Plus size={14} /> Adicionar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SettingsPage() {
@@ -146,56 +211,62 @@ export default function SettingsPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {templates.map((template) => (
-              <div key={template.id} className="card" style={{ 
-                background: 'rgba(255,255,255,0.02)', 
-                display: 'grid', 
-                gridTemplateColumns: '40px 1fr 120px 120px 120px', 
-                alignItems: 'center', 
-                gap: 20,
-                opacity: template.isActive ? 1 : 0.5
-              }}>
-                <div style={{ color: 'var(--color-text-3)' }}>#{template.stepOrder}</div>
+              <div key={template.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="card" style={{ 
+                  background: 'rgba(255,255,255,0.02)', 
+                  display: 'grid', 
+                  gridTemplateColumns: '40px 1fr 120px 120px 120px', 
+                  alignItems: 'center', 
+                  gap: 20,
+                  opacity: template.isActive ? 1 : 0.5
+                }}>
+                  <div style={{ color: 'var(--color-text-3)' }}>#{template.stepOrder}</div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: template.color || '#333' }}></div>
+                    <span style={{ fontWeight: 600 }}>{STEP_LABELS[template.name] || template.name}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-2)' }}>
+                     <Clock size={14} />
+                     {template.estimatedMinutes} min
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button 
+                      className={`btn btn-icon ${template.isActive ? 'btn-ghost' : 'btn-primary'}`}
+                      onClick={() => handleUpdate(template.id, { isActive: !template.isActive })}
+                      title={template.isActive ? 'Desativar' : 'Ativar'}
+                    >
+                      <Power size={16} />
+                    </button>
+                    <button 
+                      className="btn btn-icon btn-ghost" 
+                      onClick={() => {
+                          const newName = window.prompt('Novo nome:', template.name);
+                          if (newName) handleUpdate(template.id, { name: newName });
+                      }}
+                    >
+                      <Save size={16} />
+                    </button>
+                    <button className="btn btn-icon btn-danger" onClick={() => handleDelete(template.id)}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                     <Palette size={14} color="var(--color-text-3)" />
+                     <input 
+                      type="color" 
+                      value={template.color || '#333'} 
+                      onChange={e => handleUpdate(template.id, { color: e.target.value })}
+                      style={{ width: 30, height: 20, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
+                     />
+                  </div>
+                </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: template.color || '#333' }}></div>
-                  <span style={{ fontWeight: 600 }}>{STEP_LABELS[template.name] || template.name}</span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-2)' }}>
-                   <Clock size={14} />
-                   {template.estimatedMinutes} min
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button 
-                    className={`btn btn-icon ${template.isActive ? 'btn-ghost' : 'btn-primary'}`}
-                    onClick={() => handleUpdate(template.id, { isActive: !template.isActive })}
-                    title={template.isActive ? 'Desativar' : 'Ativar'}
-                  >
-                    <Power size={16} />
-                  </button>
-                  <button 
-                    className="btn btn-icon btn-ghost" 
-                    onClick={() => {
-                        const newName = window.prompt('Novo nome:', template.name);
-                        if (newName) handleUpdate(template.id, { name: newName });
-                    }}
-                  >
-                    <Save size={16} />
-                  </button>
-                  <button className="btn btn-icon btn-danger" onClick={() => handleDelete(template.id)}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                   <Palette size={14} color="var(--color-text-3)" />
-                   <input 
-                    type="color" 
-                    value={template.color || '#333'} 
-                    onChange={e => handleUpdate(template.id, { color: e.target.value })}
-                    style={{ width: 30, height: 20, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
-                   />
+                <div style={{ paddingLeft: 60 }}>
+                   <ChecklistManager template={template} onRefresh={fetchTemplates} />
                 </div>
               </div>
             ))}

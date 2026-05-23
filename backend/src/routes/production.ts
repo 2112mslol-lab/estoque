@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { StepStatus, OrderStatus } from '@prisma/client';
 import { authenticate, authorize } from '../middleware/auth';
+import { createChecklistsForSteps } from './createChecklistsForSteps';
 
 const router = Router();
 
@@ -48,19 +49,27 @@ router.post('/manual-launch', authorize(['ADMIN', 'USER']), async (req, res) => 
     // Criar etapas
     const templates = await prisma.productionStepTemplate.findMany({
       where: { isActive: true },
-      orderBy: { stepOrder: 'asc' }
+      orderBy: { stepOrder: 'asc' },
+      include: { checklistItems: true }
     });
 
+    const hasBorda = product.name.toLowerCase().includes('borda');
+    const filteredTemplates = hasBorda 
+      ? templates 
+      : templates.filter(t => t.name.toUpperCase() !== 'FINISHING');
+
     await prisma.productionStep.createMany({
-      data: templates.map(t => ({
+      data: filteredTemplates.map((t, index) => ({
         orderItemId: item.id,
         stepTemplateId: t.id,
         stepName: t.name,
-        stepOrder: t.stepOrder,
+        stepOrder: index + 1,
         estimatedMinutes: t.estimatedMinutes,
         status: StepStatus.PENDING
       }))
     });
+
+    await createChecklistsForSteps(prisma, item.id, templates);
 
     res.json(item);
   } catch (error) {
@@ -82,7 +91,8 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
     // Buscar templates
     const templates = await prisma.productionStepTemplate.findMany({
       where: { isActive: true },
-      orderBy: { stepOrder: 'asc' }
+      orderBy: { stepOrder: 'asc' },
+      include: { checklistItems: true }
     });
 
     let targetItemId = id;
@@ -106,17 +116,24 @@ router.post('/start/:id', authorize(['ADMIN']), async (req, res) => {
       await prisma.orderItem.update({ where: { id }, data: { isStarted: true, status: 'IN_PRODUCTION' } });
     }
 
+    const hasBorda = item.productName.toLowerCase().includes('borda');
+    const filteredTemplates = hasBorda 
+      ? templates 
+      : templates.filter(t => t.name.toUpperCase() !== 'FINISHING');
+
     await prisma.productionStep.deleteMany({ where: { orderItemId: targetItemId } });
     await prisma.productionStep.createMany({
-      data: templates.map(t => ({
+      data: filteredTemplates.map((t, index) => ({
         orderItemId: targetItemId,
         stepTemplateId: t.id,
         stepName: t.name,
-        stepOrder: t.stepOrder,
+        stepOrder: index + 1,
         estimatedMinutes: t.estimatedMinutes,
         status: StepStatus.PENDING
       }))
     });
+
+    await createChecklistsForSteps(prisma, targetItemId, templates);
 
     res.json({ message: 'Produção iniciada' });
   } catch (error) {
@@ -132,29 +149,27 @@ router.put('/steps/:id', async (req, res) => {
   try {
     const step = await prisma.productionStep.findUnique({
       where: { id },
-      include: { item: { include: { order: true } } }
+      include: { item: { include: { order: true } }, checklistItems: true }
     });
 
     if (!step) return res.status(404).json({ error: 'Etapa não encontrada' });
 
     const isLastStep = step.stepName.toUpperCase() === 'EMBALAGEM';
     const oldCompleted = step.completedQuantity;
-    const newCompleted = completedQuantity !== undefined ? parseInt(completedQuantity) : (status === 'COMPLETED' ? step.item.quantity : oldCompleted);
+    let newCompleted = completedQuantity !== undefined ? parseInt(completedQuantity) : (status === 'COMPLETED' ? step.item.quantity : oldCompleted);
+    
+    if (newCompleted >= step.item.quantity || status === 'COMPLETED') {
+      const pendingChecklists = step.checklistItems.filter(c => c.isMandatory && !c.isChecked);
+      if (pendingChecklists.length > 0) {
+        return res.status(400).json({ error: 'Existem itens obrigatórios pendentes no checklist da etapa.' });
+      }
+    }
+
     const addedQuantity = newCompleted - oldCompleted;
+    let finalItemQuantity = step.item.quantity;
 
-    const updatedStep = await prisma.productionStep.update({
-      where: { id },
-      data: {
-        completedQuantity: newCompleted,
-        status: newCompleted >= step.item.quantity ? StepStatus.COMPLETED : StepStatus.IN_PROGRESS,
-        completedAt: newCompleted >= step.item.quantity ? new Date() : null,
-        startedAt: step.startedAt || new Date()
-      },
-      include: { item: { include: { order: true } } }
-    });
-
-    // SE FOR EMBALAGEM E FOR ITEM DE ESTOQUE (OU PRODUÇÃO MANUAL), ALOCAR PARA PEDIDOS
-    if (isLastStep && addedQuantity > 0 && step.item.isStock) {
+    // SE FOR EMBALAGEM, ALOCAR PARA PEDIDOS (DIVERSÃO INTELIGENTE DE FLUXOS)
+    if (isLastStep && addedQuantity > 0) {
       let remainingToAllocate = addedQuantity;
 
       // Buscar pedidos que precisam deste produto
@@ -186,24 +201,166 @@ router.put('/steps/:id', async (req, res) => {
       for (const candidate of sortedCandidates) {
         if (remainingToAllocate <= 0) break;
         
-        const needed = candidate.quantity; // Simplificando: aloca o item inteiro se possível
+        const needed = candidate.quantity;
         const allocated = Math.min(needed, remainingToAllocate);
 
-        // Se alocamos totalmente ou parcialmente, atualizamos o candidato
+        if (candidate.id === step.item.id) {
+          // Se for o próprio item, mantém nele mesmo e diminui o saldo a alocar
+          remainingToAllocate -= allocated;
+          continue;
+        }
+
+        // Determinar ID do item a transferir (pode ser o step.item inteiro ou um split)
+        let itemToTransferId = step.item.id;
+        if (finalItemQuantity > allocated) {
+          // Criar novo OrderItem com a quantidade alocada
+          const newItem = await prisma.orderItem.create({
+            data: {
+              orderId: step.item.orderId,
+              productId: step.item.productId,
+              productName: step.item.productName,
+              customization: step.item.customization,
+              quantity: allocated,
+              status: 'COMPLETED',
+              isStarted: true,
+              isPicked: step.item.isPicked,
+              isStock: step.item.isStock,
+              priorityRank: step.item.priorityRank
+            }
+          });
+
+          // Copiar as etapas de produção para o novo item
+          const currentSteps = await prisma.productionStep.findMany({
+            where: { orderItemId: step.item.id }
+          });
+          await prisma.productionStep.createMany({
+            data: currentSteps.map(s => ({
+              orderItemId: newItem.id,
+              stepTemplateId: s.stepTemplateId,
+              stepName: s.stepName,
+              stepOrder: s.stepOrder,
+              status: StepStatus.COMPLETED,
+              completedQuantity: allocated,
+              estimatedMinutes: s.estimatedMinutes,
+              startedAt: s.startedAt || new Date(),
+              completedAt: s.completedAt || new Date(),
+              assignedTo: s.assignedTo,
+              notes: s.notes
+            }))
+          });
+
+          // Atualizar quantidade do item original no banco de dados
+          await prisma.orderItem.update({
+            where: { id: step.item.id },
+            data: { quantity: { decrement: allocated } }
+          });
+
+          // Ajustar a quantidade na etapa atual do item original
+          await prisma.productionStep.update({
+            where: { orderItemId_stepName: { orderItemId: step.item.id, stepName: step.stepName } },
+            data: { completedQuantity: step.completedQuantity - allocated }
+          });
+
+          finalItemQuantity -= allocated;
+          newCompleted -= allocated;
+          itemToTransferId = newItem.id;
+        }
+
+        // Determinar ID do candidato a transferir (pode ser o candidate inteiro ou um split)
+        let candidateToTransferId = candidate.id;
+        if (candidate.quantity > allocated) {
+          const newCand = await prisma.orderItem.create({
+            data: {
+              orderId: candidate.orderId,
+              productId: candidate.productId,
+              productName: candidate.productName,
+              customization: candidate.customization,
+              quantity: allocated,
+              status: candidate.status,
+              isStarted: candidate.isStarted,
+              isPicked: candidate.isPicked,
+              isStock: candidate.isStock,
+              priorityRank: candidate.priorityRank
+            }
+          });
+
+          const candSteps = await prisma.productionStep.findMany({
+            where: { orderItemId: candidate.id }
+          });
+          if (candSteps.length > 0) {
+            await prisma.productionStep.createMany({
+              data: candSteps.map(s => ({
+                orderItemId: newCand.id,
+                stepTemplateId: s.stepTemplateId,
+                stepName: s.stepName,
+                stepOrder: s.stepOrder,
+                status: s.status,
+                completedQuantity: Math.min(s.completedQuantity, allocated),
+                estimatedMinutes: s.estimatedMinutes,
+                startedAt: s.startedAt,
+                completedAt: s.completedAt,
+                assignedTo: s.assignedTo,
+                notes: s.notes
+              }))
+            });
+          }
+
+          await prisma.orderItem.update({
+            where: { id: candidate.id },
+            data: { quantity: { decrement: allocated } }
+          });
+
+          candidateToTransferId = newCand.id;
+        }
+
+        // Realizar o swap ou deleção de pendentes
+        const tempOrderId = step.item.orderId;
+        const candItem = await prisma.orderItem.findUnique({ where: { id: candidateToTransferId } });
+
         await prisma.orderItem.update({
-          where: { id: candidate.id },
-          data: { status: 'COMPLETED' }
+          where: { id: itemToTransferId },
+          data: { orderId: candItem?.orderId, status: 'COMPLETED' }
         });
 
-        // Marcar todas as etapas do pedido como concluídas (recebeu do estoque)
+        // Garantir que as etapas de produção do item transferido também estejam marcadas como concluídas
         await prisma.productionStep.updateMany({
-          where: { orderItemId: candidate.id },
-          data: { status: StepStatus.COMPLETED, completedQuantity: candidate.quantity, completedAt: new Date() }
+          where: { orderItemId: itemToTransferId },
+          data: { status: StepStatus.COMPLETED, completedQuantity: allocated, completedAt: new Date() }
         });
+
+        if (tempOrderId) {
+          await prisma.orderItem.update({
+            where: { id: candidateToTransferId },
+            data: {
+              orderId: tempOrderId,
+              isStarted: false,
+              status: 'WAITING'
+            }
+          });
+          await prisma.productionStep.deleteMany({
+            where: { orderItemId: candidateToTransferId }
+          });
+        } else {
+          // Se o item original era estoque, o candidato transferido (pendente) não precisa existir como estoque pendente
+          await prisma.orderItem.delete({
+            where: { id: candidateToTransferId }
+          });
+        }
 
         remainingToAllocate -= allocated;
       }
     }
+
+    const updatedStep = await prisma.productionStep.update({
+      where: { id },
+      data: {
+        completedQuantity: newCompleted,
+        status: newCompleted >= finalItemQuantity ? StepStatus.COMPLETED : StepStatus.IN_PROGRESS,
+        completedAt: newCompleted >= finalItemQuantity ? new Date() : null,
+        startedAt: step.startedAt || new Date()
+      },
+      include: { item: { include: { order: true } } }
+    });
 
     // Lógica padrão de conclusão de item/pedido
     if (updatedStep.status === StepStatus.COMPLETED) {
@@ -230,13 +387,85 @@ router.put('/steps/:id', async (req, res) => {
   }
 });
 
+// POST /api/production/steps/:id/split - Desmembrar e avançar parcialmente
+router.post('/steps/:id/split', async (req, res) => {
+  const { id } = req.params;
+  const { quantityToAdvance } = req.body;
+
+  try {
+    const step = await prisma.productionStep.findUnique({
+      where: { id },
+      include: { item: { include: { productionSteps: true } } }
+    });
+    if (!step) return res.status(404).json({ error: 'Etapa não encontrada' });
+
+    const qty = parseInt(quantityToAdvance);
+    if (qty <= 0 || qty >= step.item.quantity) {
+      return res.status(400).json({ error: 'Quantidade para avançar deve ser maior que 0 e menor que o total.' });
+    }
+
+    // Valida checklist antes de avançar a parte
+    const pendingChecklists = await prisma.checklistItem.findMany({
+      where: { productionStepId: id, isMandatory: true, isChecked: false }
+    });
+    if (pendingChecklists.length > 0) {
+      return res.status(400).json({ error: 'Existem itens obrigatórios pendentes no checklist da etapa.' });
+    }
+
+    // Cria novo OrderItem
+    const newItem = await prisma.orderItem.create({
+      data: {
+        orderId: step.item.orderId,
+        productId: step.item.productId,
+        productName: step.item.productName,
+        customization: step.item.customization,
+        quantity: qty,
+        status: step.item.status,
+        isStarted: step.item.isStarted,
+        isPicked: step.item.isPicked,
+        isStock: step.item.isStock,
+        priorityRank: step.item.priorityRank
+      }
+    });
+
+    // Subtrai do atual
+    await prisma.orderItem.update({
+      where: { id: step.item.id },
+      data: { quantity: step.item.quantity - qty }
+    });
+
+    // Copia as etapas
+    await prisma.productionStep.createMany({
+      data: step.item.productionSteps.map(s => ({
+        orderItemId: newItem.id,
+        stepTemplateId: s.stepTemplateId,
+        stepName: s.stepName,
+        stepOrder: s.stepOrder,
+        status: s.stepOrder <= step.stepOrder ? StepStatus.COMPLETED : s.status,
+        completedQuantity: s.stepOrder <= step.stepOrder ? qty : 0,
+        completedAt: s.stepOrder <= step.stepOrder ? new Date() : null,
+        estimatedMinutes: s.estimatedMinutes,
+        startedAt: s.startedAt,
+        assignedTo: s.assignedTo,
+        notes: s.notes
+      }))
+    });
+
+    res.json({ message: 'Item desmembrado e avançado com sucesso!', newItemId: newItem.id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao desmembrar item' });
+  }
+});
+
 // GET /api/production/kanban
 router.get('/kanban', async (_req, res) => {
   try {
     const steps = await prisma.productionStep.findMany({
       where: { status: { in: [StepStatus.PENDING, StepStatus.IN_PROGRESS] } },
       include: {
-        item: { include: { productionSteps: true, order: { include: { client: true } } } }
+        item: { include: { productionSteps: true, order: { include: { client: true } } } },
+        checklistItems: true
       },
       orderBy: [
         { item: { order: { isPriority: 'desc' } } },
@@ -260,7 +489,8 @@ router.get('/sector/:stepName', async (req, res) => {
         status: { in: [StepStatus.PENDING, StepStatus.IN_PROGRESS] },
       },
       include: {
-        item: { include: { order: { include: { client: true } } } }
+        item: { include: { order: { include: { client: true } } } },
+        checklistItems: true
       },
       orderBy: [
         { item: { order: { isPriority: 'desc' } } },
@@ -293,10 +523,21 @@ router.post('/inject', authorize(['ADMIN', 'USER']), async (req, res) => {
   
       const templates = await prisma.productionStepTemplate.findMany({
         where: { isActive: true },
-        orderBy: { stepOrder: 'asc' }
+        orderBy: { stepOrder: 'asc' },
+        include: { checklistItems: true }
       });
-  
-      const targetTemplate = templates.find(t => t.name.toUpperCase() === targetStepName.toUpperCase());
+
+      const hasBorda = item.productName.toLowerCase().includes('borda');
+      const filteredTemplates = hasBorda 
+        ? templates 
+        : templates.filter(t => t.name.toUpperCase() !== 'FINISHING');
+
+      const mappedTemplates = filteredTemplates.map((t, idx) => ({
+        ...t,
+        stepOrder: idx + 1
+      }));
+
+      const targetTemplate = mappedTemplates.find(t => t.name.toUpperCase() === targetStepName.toUpperCase());
       if (!targetTemplate) return res.status(400).json({ error: 'Setor de destino inválido' });
   
       let finalItemId = orderItemId;
@@ -331,7 +572,7 @@ router.post('/inject', authorize(['ADMIN', 'USER']), async (req, res) => {
       await prisma.productionStep.deleteMany({ where: { orderItemId: finalItemId } });
   
       await prisma.productionStep.createMany({
-        data: templates.map(t => ({
+        data: mappedTemplates.map(t => ({
           orderItemId: finalItemId,
           stepTemplateId: t.id,
           stepName: t.name,
@@ -343,12 +584,31 @@ router.post('/inject', authorize(['ADMIN', 'USER']), async (req, res) => {
         }))
       });
   
+      await createChecklistsForSteps(prisma, finalItemId, templates);
+
       res.json({ message: `Item injetado no setor ${targetStepName}` });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Erro ao injetar item no setor' });
     }
   });
+
+// PUT /api/production/steps/:stepId/checklist/:itemId - Toggle checklist item
+router.put('/steps/:stepId/checklist/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { isChecked } = req.body;
+    
+    const item = await prisma.checklistItem.update({
+      where: { id: itemId },
+      data: { isChecked }
+    });
+
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar checklist' });
+  }
+});
 
 router.put('/reorder', authorize(['ADMIN']), async (req, res) => {
     const { items } = req.body;

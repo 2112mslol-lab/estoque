@@ -35,7 +35,7 @@ const COLUMN_ICONS: Record<string, React.ReactNode> = {
   PACKAGING: <Package size={18} />,
 };
 
-function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: string, status: StepStatus) => void }) {
+function KanbanCard({ step, onUpdate, onClick }: { step: ProductionStep; onUpdate: (id: string, status: StepStatus) => void; onClick: () => void; }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.id });
   
   const style = {
@@ -59,8 +59,8 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
   return (
     <div
       ref={setNodeRef}
-      style={style}
       className={`kanban-card ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''} ${isQuickWin ? 'quick-win' : ''}`}
+      onClick={onClick}
       style={{
         ...style,
         borderTop: isQuickWin ? '4px solid #10b981' : undefined,
@@ -93,8 +93,8 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
         </span>
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12, fontWeight: step.item?.order?.client?.name ? 500 : 800 }}>
-        {step.item?.order?.client?.name || (step.item?.isStock ? '📦 Produção Livre' : '👤 Venda Avulsa')}
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12, fontWeight: 700 }}>
+        {step.item?.isStock ? '📦 Produção de Estoque' : '👤 Produção sob Demanda'}
       </div>
 
 
@@ -117,6 +117,12 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
         </div>
       )}
 
+      {step.checklistItems && step.checklistItems.length > 0 && (
+        <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span>☑</span> {step.checklistItems.filter(c => c.isChecked).length} / {step.checklistItems.length}
+        </div>
+      )}
+
       <div className="card-footer" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 11, fontWeight: 700 }}>
            {step.completedQuantity} / {step.item?.quantity} un
@@ -133,10 +139,11 @@ function KanbanCard({ step, onUpdate }: { step: ProductionStep; onUpdate: (id: s
 }
 
 
-function KanbanColumn({ stepName, steps, onUpdateStep }: { 
+function KanbanColumn({ stepName, steps, onUpdateStep, onCardClick }: { 
   stepName: StepName; 
   steps: ProductionStep[]; 
   onUpdateStep: (id: string, status: StepStatus) => void;
+  onCardClick: (step: ProductionStep) => void;
 }) {
   const label = STEP_LABELS[stepName] || stepName;
   const icon = (COLUMN_ICONS as any)[stepName] || <Package size={18} />;
@@ -156,9 +163,123 @@ function KanbanColumn({ stepName, steps, onUpdateStep }: {
       <div className="kanban-cards">
         <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
           {steps.map((step) => (
-            <KanbanCard key={step.id} step={step} onUpdate={onUpdateStep} />
+            <KanbanCard key={step.id} step={step} onUpdate={onUpdateStep} onClick={() => onCardClick(step)} />
           ))}
         </SortableContext>
+      </div>
+    </div>
+  );
+}
+
+function StepDetailsModal({ step, onClose, onRefresh }: { step: ProductionStep; onClose: () => void; onRefresh: () => void }) {
+  const [updating, setUpdating] = useState(false);
+
+  const toggleChecklist = async (itemId: string, isChecked: boolean) => {
+    try {
+      await api.put(`/production/steps/${step.id}/checklist/${itemId}`, { isChecked });
+      onRefresh();
+    } catch (e) {
+      toast.error('Erro ao atualizar checklist');
+    }
+  };
+
+  const maxQty = step.item?.quantity || 1;
+  const [completedQty, setCompletedQty] = useState<number>(maxQty);
+
+  const handleComplete = async () => {
+    try {
+      setUpdating(true);
+      await api.put(`/production/steps/${step.id}`, { 
+        completedQuantity: completedQty, 
+        status: completedQty >= maxQty ? 'COMPLETED' : 'IN_PROGRESS' 
+      });
+      toast.success(completedQty >= maxQty ? 'Etapa concluída!' : 'Quantidade atualizada no setor!');
+      onRefresh();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao atualizar etapa');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSplitAndAdvance = async () => {
+    try {
+      setUpdating(true);
+      await api.post(`/production/steps/${step.id}/split`, { quantityToAdvance: completedQty });
+      toast.success(`${completedQty} peças avançadas para a próxima etapa!`);
+      onRefresh();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao desmembrar item');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const allMandatoryChecked = !step.checklistItems || step.checklistItems.every(c => !c.isMandatory || c.isChecked);
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div className="card shadow-premium" onClick={e => e.stopPropagation()} style={{ background: 'var(--color-surface-2)', padding: 24, borderRadius: 12, width: 450, maxWidth: '90%' }}>
+        <h3 style={{ marginBottom: 16 }}>Detalhes da Etapa</h3>
+        <p><strong>Pedido:</strong> {step.item?.order?.orderNumber}</p>
+        <p><strong>Produto:</strong> {step.item?.quantity}x {step.item?.productName}</p>
+        
+        <div style={{ marginTop: 20 }}>
+          <label style={{ display: 'block', fontSize: 13, marginBottom: 8, color: 'var(--color-text-2)' }}>Quantidade que está pronta agora:</label>
+          <input 
+            type="number" 
+            className="input" 
+            value={completedQty} 
+            onChange={(e) => setCompletedQty(parseInt(e.target.value) || 0)}
+            min={1}
+            max={maxQty}
+            style={{ width: '100%', padding: '8px 12px' }}
+          />
+        </div>
+
+        {step.checklistItems && step.checklistItems.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <h4>Checklist</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+              {step.checklistItems.map(ci => (
+                <label key={ci.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+                  <input type="checkbox" checked={ci.isChecked} onChange={(e) => toggleChecklist(ci.id, e.target.checked)} />
+                  <span style={{ textDecoration: ci.isChecked ? 'line-through' : 'none', color: ci.isChecked ? 'var(--color-text-3)' : 'inherit' }}>
+                    {ci.text} {ci.isMandatory ? <span style={{ color: 'var(--color-danger)' }}>*</span> : ''}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {completedQty < maxQty && completedQty > 0 ? (
+            <>
+              <div style={{ fontSize: 12, color: 'var(--color-warning)', marginBottom: 8, padding: 8, background: 'rgba(245, 158, 11, 0.1)', borderRadius: 6 }}>
+                💡 Você selecionou uma quantidade parcial. Você deseja <strong>desmembrar</strong> essas peças para a próxima etapa, ou apenas <strong>registrar</strong> o progresso e mantê-las aqui?
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+                <button className="btn btn-secondary" onClick={handleComplete} disabled={updating || !allMandatoryChecked}>
+                  Apenas Registrar ({completedQty} un)
+                </button>
+                <button className="btn btn-primary" onClick={handleSplitAndAdvance} disabled={updating || !allMandatoryChecked}>
+                  Avançar Peças Prontas
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleComplete} disabled={updating || !allMandatoryChecked || completedQty <= 0}>
+                {updating ? 'Aguarde...' : 'Concluir Etapa'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -168,6 +289,7 @@ export default function KanbanPage() {
   const [steps, setSteps] = useState<ProductionStep[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStep, setSelectedStep] = useState<ProductionStep | null>(null);
 
 
   const fetchSteps = async () => {
@@ -228,11 +350,19 @@ export default function KanbanPage() {
                 key={col} 
                 stepName={col} 
                 steps={steps.filter(s => s.stepName === col)} 
-                onUpdateStep={handleUpdateStatus} 
+                onUpdateStep={handleUpdateStatus}
+                onCardClick={(s) => setSelectedStep(s)} 
               />
             ))}
           </DndContext>
         </div>
+      )}
+      {selectedStep && (
+        <StepDetailsModal 
+          step={selectedStep} 
+          onClose={() => setSelectedStep(null)} 
+          onRefresh={() => { fetchSteps(); setSelectedStep(prev => steps.find(s => s.id === prev?.id) || null); }}
+        />
       )}
     </div>
   );

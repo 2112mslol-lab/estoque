@@ -49,6 +49,9 @@ function CreateOrderModal({ order, onClose, onSaved }: {
   );
 
   const [loading, setLoading] = useState(false);
+  const [showQuickClient, setShowQuickClient] = useState(false);
+  const [quickClientForm, setQuickClientForm] = useState({ name: '', phone: '' });
+  const [savingQuickClient, setSavingQuickClient] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -82,6 +85,25 @@ function CreateOrderModal({ order, onClose, onSaved }: {
     const newItems = [...items];
     (newItems[index] as any)[field] = value;
     setItems(newItems);
+  };
+
+  const handleSaveQuickClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickClientForm.name.trim()) return toast.error('Nome do cliente é obrigatório');
+    setSavingQuickClient(true);
+    try {
+      const res = await api.post('/clients', quickClientForm);
+      toast.success('Cliente cadastrado!');
+      const resClients = await api.get('/clients');
+      setClients(resClients.data);
+      setForm(prev => ({ ...prev, clientId: res.data.id }));
+      setShowQuickClient(false);
+      setQuickClientForm({ name: '', phone: '' });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao cadastrar cliente');
+    } finally {
+      setSavingQuickClient(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,14 +141,26 @@ function CreateOrderModal({ order, onClose, onSaved }: {
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Cliente (Opcional)</label>
-                <select 
-                  className="form-input" 
-                  value={form.clientId} 
-                  onChange={e => setForm({ ...form, clientId: e.target.value })}
-                >
-                  <option value="">Selecione um cliente...</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select 
+                    className="form-input" 
+                    style={{ marginTop: 0 }}
+                    value={form.clientId} 
+                    onChange={e => setForm({ ...form, clientId: e.target.value })}
+                  >
+                    <option value="">Selecione um cliente...</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    title="Cadastrar Novo Cliente"
+                    style={{ padding: '10px 14px', flexShrink: 0 }}
+                    onClick={() => setShowQuickClient(true)}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Data Prevista de Entrega *</label>
@@ -216,6 +250,48 @@ function CreateOrderModal({ order, onClose, onSaved }: {
           </div>
         </form>
       </div>
+
+      {showQuickClient && (
+        <div className="modal-overlay" style={{ zIndex: 3000 }} onClick={() => setShowQuickClient(false)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Cadastro Rápido de Cliente</h2>
+              <button className="btn btn-ghost" onClick={() => setShowQuickClient(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSaveQuickClient}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="form-group">
+                  <label className="form-label">Nome Completo *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Nome do cliente"
+                    value={quickClientForm.name}
+                    onChange={e => setQuickClientForm({ ...quickClientForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Telefone / WhatsApp</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Telefone"
+                    value={quickClientForm.phone}
+                    onChange={e => setQuickClientForm({ ...quickClientForm, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowQuickClient(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={savingQuickClient}>
+                  {savingQuickClient ? 'Salvando...' : 'Cadastrar e Selecionar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -280,6 +356,11 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
 
+  // Filter and sort states
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [filterPriority, setFilterPriority] = useState<boolean | null>(null);
+  const [sortBy, setSortBy] = useState<string>('DELIVERY_DATE_ASC');
+
   const fetchOrders = async () => {
     const res = await api.get<Order[]>('/orders');
     setOrders(res.data);
@@ -319,11 +400,28 @@ export default function OrdersPage() {
     }
   };
 
-  const filtered = orders.filter(o => 
-    o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-    (o.client?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    o.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = orders
+    .filter(o => 
+      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+      (o.client?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      o.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()))
+    )
+    .filter(o => filterStatus === 'ALL' || o.status === filterStatus)
+    .filter(o => filterPriority === null || o.isPriority === filterPriority)
+    .sort((a, b) => {
+      if (sortBy === 'DELIVERY_DATE_ASC') {
+        return new Date(a.deliveryDate).getTime() - new Date(b.deliveryDate).getTime();
+      } else if (sortBy === 'DELIVERY_DATE_DESC') {
+        return new Date(b.deliveryDate).getTime() - new Date(a.deliveryDate).getTime();
+      } else if (sortBy === 'ORDER_NUMBER_ASC') {
+        return a.orderNumber.localeCompare(b.orderNumber);
+      } else if (sortBy === 'ORDER_NUMBER_DESC') {
+        return b.orderNumber.localeCompare(a.orderNumber);
+      } else if (sortBy === 'CREATED_DATE_DESC') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return 0;
+    });
 
   const handleShareTracking = (order: Order) => {
     const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
@@ -359,16 +457,68 @@ export default function OrdersPage() {
         </button>
       </div>
 
-      <div className="card mb-6 shadow-premium">
-        <div style={{ position: 'relative', maxWidth: 400 }}>
+      <div className="card mb-6 shadow-premium" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'relative', minWidth: 300, flex: 1 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-3)' }} />
           <input 
             className="form-input" 
-            style={{ paddingLeft: 36 }}
+            style={{ paddingLeft: 36, marginTop: 0 }}
             placeholder="Buscar por peça, cliente ou no. pedido..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>Status:</span>
+            <select 
+              className="form-input" 
+              style={{ width: 140, marginTop: 0, padding: '8px 12px', height: 38 }}
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+            >
+              <option value="ALL">Todos</option>
+              {Object.entries(ORDER_STATUS_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>Prioridade:</span>
+            <select 
+              className="form-input" 
+              style={{ width: 130, marginTop: 0, padding: '8px 12px', height: 38 }}
+              value={filterPriority === null ? 'ALL' : filterPriority ? 'PRIORITY' : 'NORMAL'}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'ALL') setFilterPriority(null);
+                else if (val === 'PRIORITY') setFilterPriority(true);
+                else setFilterPriority(false);
+              }}
+            >
+              <option value="ALL">Todos</option>
+              <option value="PRIORITY">Prioritários</option>
+              <option value="NORMAL">Normais</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>Ordenar por:</span>
+            <select 
+              className="form-input" 
+              style={{ width: 180, marginTop: 0, padding: '8px 12px', height: 38 }}
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+            >
+              <option value="DELIVERY_DATE_ASC">Data de Entrega (Crescente)</option>
+              <option value="DELIVERY_DATE_DESC">Data de Entrega (Decrescente)</option>
+              <option value="ORDER_NUMBER_ASC">No. Pedido (A-Z)</option>
+              <option value="ORDER_NUMBER_DESC">No. Pedido (Z-A)</option>
+              <option value="CREATED_DATE_DESC">Data de Criação (Mais recente)</option>
+            </select>
+          </div>
         </div>
       </div>
 

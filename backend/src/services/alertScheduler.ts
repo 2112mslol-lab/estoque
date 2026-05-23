@@ -68,7 +68,7 @@ export async function checkAndCreateAlerts() {
         // Criar alerta de setor atrasado
         const label = STEP_LABELS[step.stepName] || step.stepName;
         const title = `Setor Atrasado: ${label}`;
-        const message = `A peça "${step.item.productName}" (Pedido ${step.item.order.orderNumber}) está no setor de ${label} há ${Math.round(elapsedMinutes)} min (Máx: ${step.estimatedMinutes}min).`;
+        const message = `A peça "${step.item.productName}" (Pedido ${step.item.order?.orderNumber || 'S/N'}) está no setor de ${label} há ${Math.round(elapsedMinutes)} min (Máx: ${step.estimatedMinutes}min).`;
         
         // Evitar duplicidade de alerta para a mesma etapa
         const existingAlert = await prisma.alert.findFirst({

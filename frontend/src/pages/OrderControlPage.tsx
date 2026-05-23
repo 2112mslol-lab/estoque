@@ -19,6 +19,7 @@ export default function OrderControlPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterReadiness, setFilterReadiness] = useState<string>('ALL');
   const { subscribe } = useSocket();
 
   const fetchOrders = async () => {
@@ -54,10 +55,48 @@ export default function OrderControlPage() {
     }
   };
 
-  const filtered = orders.filter(o => 
-    o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-    o.client.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleDeliverOrder = async (orderId: string) => {
+    try {
+      await api.patch(`/orders/${orderId}/status`, { status: 'DELIVERED' });
+      toast.success('Pedido despachado e entregue com sucesso!');
+      fetchOrders();
+    } catch (err) {
+      toast.error('Erro ao despachar pedido. Verifique suas permissões.');
+    }
+  };
+
+  const filtered = orders
+    .filter(o => 
+      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+      o.client.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter(o => {
+      if (filterReadiness === 'ALL') return true;
+      const allCompletedInProduction = o.items.every(i => i.status === 'COMPLETED');
+      if (filterReadiness === 'READY') return allCompletedInProduction;
+      if (filterReadiness === 'PRODUCTION') return !allCompletedInProduction;
+      return true;
+    });
+
+  const sortedAndFiltered = [...filtered].sort((a, b) => {
+    // 1. Prioritário no topo
+    if (a.isPriority && !b.isPriority) return -1;
+    if (!a.isPriority && b.isPriority) return 1;
+
+    // 2. Prontos para expedição no topo
+    const aReady = a.items.every(i => i.status === 'COMPLETED');
+    const bReady = b.items.every(i => i.status === 'COMPLETED');
+    if (aReady && !bReady) return -1;
+    if (!aReady && bReady) return 1;
+
+    // 3. Data de entrega mais próxima primeiro
+    const aDate = new Date(a.deliveryDate).getTime();
+    const bDate = new Date(b.deliveryDate).getTime();
+    if (aDate !== bDate) return aDate - bDate;
+
+    // 4. Data de criação
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   return (
     <div>
@@ -68,39 +107,65 @@ export default function OrderControlPage() {
         </div>
       </div>
 
-      <div className="card mb-6">
-        <div style={{ position: 'relative', maxWidth: 400 }}>
+      <div className="card mb-6" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'relative', minWidth: 300, flex: 1 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-3)' }} />
           <input 
             className="form-input" 
-            style={{ paddingLeft: 36 }}
+            style={{ paddingLeft: 36, marginTop: 0 }}
             placeholder="Buscar por cliente ou no. pedido..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>Prontidão:</span>
+          <select 
+            className="form-input" 
+            style={{ width: 180, marginTop: 0, padding: '8px 12px', height: 38 }}
+            value={filterReadiness}
+            onChange={e => setFilterReadiness(e.target.value)}
+          >
+            <option value="ALL">Todos os Pedidos</option>
+            <option value="READY">Prontos p/ Expedição</option>
+            <option value="PRODUCTION">Em Produção</option>
+          </select>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
           <p style={{ textAlign: 'center', padding: 40 }}>Carregando pedidos...</p>
-        ) : filtered.length === 0 ? (
+        ) : sortedAndFiltered.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-3)' }}>
             <ClipboardList size={40} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
             <p>Nenhum pedido pendente de expedição</p>
           </div>
-        ) : filtered.map(order => {
+        ) : sortedAndFiltered.map(order => {
           const totalItems = order.items.length;
           const pickedItems = order.items.filter(i => i.isPicked).length;
           const isFinished = order.status === 'FINISHED';
           const allCompletedInProduction = order.items.every(i => i.status === 'COMPLETED');
 
           return (
-            <div key={order.id} className="card shadow-premium" style={{ borderLeft: `6px solid ${isFinished ? 'var(--color-success)' : 'var(--color-border)'}` }}>
+            <div 
+              key={order.id} 
+              className="card shadow-premium" 
+              style={{ 
+                borderLeft: order.isPriority ? '6px solid var(--color-warning)' : `6px solid ${isFinished ? 'var(--color-success)' : 'var(--color-border)'}`,
+                boxShadow: order.isPriority ? '0 4px 20px rgba(245, 158, 11, 0.1)' : undefined
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-text-1)' }}>{order.orderNumber}</span>
+                    {order.isPriority && (
+                      <span style={{ fontSize: 10, background: 'var(--color-warning)', color: 'black', padding: '3px 8px', borderRadius: 4, fontWeight: 900 }}>
+                        ★ PRIORITÁRIO
+                      </span>
+                    )}
                     {isFinished && <span className="badge badge-success">CONCLUÍDO</span>}
                     {!isFinished && !allCompletedInProduction && <span className="badge badge-warning">EM PRODUÇÃO</span>}
                     {!isFinished && allCompletedInProduction && <span className="badge badge-primary">PRONTO P/ EXPEDIÇÃO</span>}
@@ -111,14 +176,14 @@ export default function OrderControlPage() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 4 }}>CHECKLIST</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 4 }}>CONFERIDO</div>
                   <div style={{ fontSize: 20, fontWeight: 800, color: pickedItems === totalItems ? 'var(--color-success)' : 'var(--color-text-1)' }}>
                     {pickedItems} / {totalItems}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: (allCompletedInProduction || isFinished) ? 20 : 0 }}>
                 {order.items.map(item => (
                   <div 
                     key={item.id} 
@@ -145,16 +210,39 @@ export default function OrderControlPage() {
                         {item.quantity}x {item.productName}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                        {item.status === 'COMPLETED' ? '📦 Embalado' : '⚙️ Em Produção'}
+                        {item.status === 'COMPLETED' ? '📦 Embalado / Pronto' : '⚙️ Em Produção'}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Botão de Despacho/Entrega Direta */}
+              {(allCompletedInProduction || isFinished) && (
+                <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16 }}>
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    style={{ 
+                      flex: 1, 
+                      justifyContent: 'center', 
+                      fontWeight: 800, 
+                      padding: '12px 20px', 
+                      fontSize: 14,
+                      gap: 8,
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)'
+                    }}
+                    onClick={() => handleDeliverOrder(order.id)}
+                  >
+                    <Truck size={18} /> Despachar / Entregar Pedido
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
     </div>
   );
 }

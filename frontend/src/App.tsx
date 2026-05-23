@@ -19,6 +19,7 @@ import {
 
 import { useSocket } from './hooks/useSocket';
 import { STEP_LABELS } from './types';
+import CommandPalette from './components/CommandPalette';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const OrdersPage = lazy(() => import('./pages/OrdersPage'));
@@ -324,6 +325,7 @@ export default function App() {
 
                   <MobileNav alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
                   <Toaster position="top-right" />
+                  <CommandPalette />
                 </div>
               )
             } 

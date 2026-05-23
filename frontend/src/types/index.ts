@@ -34,6 +34,8 @@ export interface OrderItem {
   quantity: number;
   status: string;
   isPicked: boolean;
+  priorityRank?: number;
+  isStock?: boolean;
   productionSteps: ProductionStep[];
 }
 
@@ -47,6 +49,14 @@ export type StepName = string;
 
 export type StepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  isMandatory: boolean;
+  isChecked: boolean;
+  productionStepId: string;
+}
+
 export interface ProductionStep {
   id: string;
   orderItemId: string;
@@ -55,10 +65,12 @@ export interface ProductionStep {
   stepOrder: number;
   status: StepStatus;
   estimatedMinutes: number;
+  completedQuantity: number;
   startedAt?: string;
   completedAt?: string;
   assignedTo?: string;
   notes?: string;
+  checklistItems?: ChecklistItem[];
 }
 
 export type UnitType = 'KG' | 'LITERS' | 'UNITS' | 'METERS' | 'SHEETS';

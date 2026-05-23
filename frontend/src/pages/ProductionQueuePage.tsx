@@ -39,6 +39,10 @@ export default function ProductionQueuePage() {
   const [search, setSearch] = useState('');
   const [startQuantities, setStartQuantities] = useState<Record<string, number>>({});
   
+  // Filtros e Ordenação
+  const [filterPriority, setFilterPriority] = useState<boolean | null>(null);
+  const [sortBy, setSortBy] = useState<string>('DELIVERY_DATE_ASC');
+
   // Estados para Produção Manual
   const [showManual, setShowManual] = useState(false);
   const [manualForm, setManualForm] = useState({ productId: '', quantity: 1 });
@@ -109,11 +113,25 @@ export default function ProductionQueuePage() {
     }
   };
 
-  const filteredItems = items.filter(it => 
-    it.productName.toLowerCase().includes(search.toLowerCase()) ||
-    it.order?.client?.name.toLowerCase().includes(search.toLowerCase()) ||
-    it.order?.orderNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredItems = items
+    .filter(it => 
+      it.productName.toLowerCase().includes(search.toLowerCase()) ||
+      (it.order?.client?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      it.order?.orderNumber.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter(it => filterPriority === null || it.order?.isPriority === filterPriority)
+    .sort((a, b) => {
+      if (sortBy === 'DELIVERY_DATE_ASC') {
+        return new Date(a.order.deliveryDate).getTime() - new Date(b.order.deliveryDate).getTime();
+      } else if (sortBy === 'DELIVERY_DATE_DESC') {
+        return new Date(b.order.deliveryDate).getTime() - new Date(a.order.deliveryDate).getTime();
+      } else if (sortBy === 'QUANTITY_DESC') {
+        return b.quantity - a.quantity;
+      } else if (sortBy === 'QUANTITY_ASC') {
+        return a.quantity - b.quantity;
+      }
+      return 0;
+    });
 
   return (
     <div className="fade-in">
@@ -136,16 +154,52 @@ export default function ProductionQueuePage() {
         </div>
       </div>
 
-      <div className="card mb-6 shadow-premium">
-        <div style={{ position: 'relative', maxWidth: 400 }}>
+      <div className="card mb-6 shadow-premium" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'relative', minWidth: 300, flex: 1 }}>
           <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-3)' }} />
           <input 
             className="form-input" 
-            style={{ paddingLeft: 44, height: 48 }}
+            style={{ paddingLeft: 44, height: 48, marginTop: 0 }}
             placeholder="Filtrar pedidos ou modelos..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>Prioridade:</span>
+            <select 
+              className="form-input" 
+              style={{ width: 130, marginTop: 0, padding: '8px 12px', height: 38 }}
+              value={filterPriority === null ? 'ALL' : filterPriority ? 'PRIORITY' : 'NORMAL'}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'ALL') setFilterPriority(null);
+                else if (val === 'PRIORITY') setFilterPriority(true);
+                else setFilterPriority(false);
+              }}
+            >
+              <option value="ALL">Todos</option>
+              <option value="PRIORITY">Prioritários</option>
+              <option value="NORMAL">Normais</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 600 }}>Ordenar por:</span>
+            <select 
+              className="form-input" 
+              style={{ width: 180, marginTop: 0, padding: '8px 12px', height: 38 }}
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+            >
+              <option value="DELIVERY_DATE_ASC">Data de Entrega (Crescente)</option>
+              <option value="DELIVERY_DATE_DESC">Data de Entrega (Decrescente)</option>
+              <option value="QUANTITY_DESC">Qtd. a Produzir (Decrescente)</option>
+              <option value="QUANTITY_ASC">Qtd. a Produzir (Crescente)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -156,7 +210,6 @@ export default function ProductionQueuePage() {
               <th style={{ width: 80 }}>Fila</th>
               <th>⭐</th>
               <th>Informações da Peça</th>
-              <th>Cliente</th>
               <th>Entrega</th>
               <th style={{ textAlign: 'center' }}>Qtd. p/ Lançar</th>
               <th style={{ textAlign: 'center' }}>Ação</th>
@@ -164,10 +217,10 @@ export default function ProductionQueuePage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 60 }}>Sincronizando fila...</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 60 }}>Sincronizando fila...</td></tr>
             ) : filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: 100, color: 'var(--color-text-3)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: 100, color: 'var(--color-text-3)' }}>
                   <CheckCircle size={60} style={{ margin: '0 auto 20px', opacity: 0.2 }} />
                   <h3>Fila de espera vazia.</h3>
                 </td>
@@ -201,7 +254,6 @@ export default function ProductionQueuePage() {
                     <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--color-primary)' }}>#{item.order.orderNumber}</div>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{item.quantity}x {item.productName}</div>
                   </td>
-                  <td>{item.order.client.name}</td>
                   <td>
                     <div style={{ fontWeight: 700, color: deliverIn <= 2 ? 'var(--color-danger)' : 'var(--color-text-1)' }}>
                         {format(new Date(item.order.deliveryDate), "dd/MM", { locale: ptBR })}

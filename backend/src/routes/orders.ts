@@ -52,7 +52,7 @@ router.post('/', authorize(['ADMIN']), async (req, res) => {
     const order = await prisma.order.create({
       data: {
         orderNumber,
-        clientId,
+        clientId: clientId || null,
         deliveryDate: new Date(deliveryDate),
         notes,
         status: OrderStatus.PENDING,

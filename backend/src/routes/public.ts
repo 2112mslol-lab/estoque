@@ -35,7 +35,7 @@ router.get('/orders/:id', async (req, res) => {
     // Filtrar dados sensíveis antes de enviar ao público
     const publicData = {
       orderNumber: order.orderNumber,
-      clientName: order.client.name,
+      clientName: order.client?.name || 'Não informado',
       status: order.status,
       deliveryDate: order.deliveryDate,
       items: order.items.map(item => ({

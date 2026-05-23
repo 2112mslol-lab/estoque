@@ -112,8 +112,21 @@ model ProductionStepTemplate {
   updatedAt        DateTime @updatedAt
 
   productionSteps  ProductionStep[]
+  checklistItems   ChecklistItemTemplate[]
 
   @@map("production_step_templates")
+}
+
+model ChecklistItemTemplate {
+  id               String   @id @default(uuid())
+  text             String
+  isMandatory      Boolean  @default(true)
+  stepTemplateId   String
+  createdAt        DateTime @default(now())
+
+  stepTemplate     ProductionStepTemplate @relation(fields: [stepTemplateId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_item_templates")
 }
 
 
@@ -145,10 +158,25 @@ model ProductionStep {
 
   item            OrderItem               @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   template        ProductionStepTemplate? @relation(fields: [stepTemplateId], references: [id])
+  checklistItems  ChecklistItem[]
 
   @@unique([orderItemId, stepName])
   @@index([status, stepName])
   @@map("production_steps")
+}
+
+model ChecklistItem {
+  id               String   @id @default(uuid())
+  text             String
+  isMandatory      Boolean  @default(true)
+  isChecked        Boolean  @default(false)
+  productionStepId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  productionStep   ProductionStep @relation(fields: [productionStepId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_items")
 }
 
 
