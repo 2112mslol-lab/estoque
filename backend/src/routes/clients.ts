@@ -62,7 +62,7 @@ router.post('/', authorize(['ADMIN']), async (req, res) => {
     res.status(201).json(client);
   } catch (error) {
     if (error instanceof z.ZodError)
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     res.status(500).json({ error: 'Erro ao criar cliente' });
   }
 });
@@ -75,7 +75,7 @@ router.put('/:id', authorize(['ADMIN']), async (req, res) => {
     res.json(client);
   } catch (error) {
     if (error instanceof z.ZodError)
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     res.status(500).json({ error: 'Erro ao atualizar cliente' });
   }
 });
