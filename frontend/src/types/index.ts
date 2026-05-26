@@ -1,9 +1,22 @@
 export interface Client {
   id: string;
+  type: 'PF' | 'PJ';
   name: string;
+  cpfCnpj?: string;
   email?: string;
   phone?: string;
+  phone2?: string;
+  instagram?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
   address?: string;
+  notes?: string;
+  isVip?: boolean;
   _count?: { orders: number };
   createdAt?: string;
 }
@@ -43,7 +56,11 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
+  colors?: string[];   // array de hex: ['#FF0000', '#00FF00']
+  details?: string[];  // array de atributos: ['Vidro 6mm', 'Jateado']
+  imageUrl?: string;   // caminho relativo: 'uploads/products/uuid.jpg'
 }
+
 
 export type StepName = string;
 

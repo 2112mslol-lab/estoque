@@ -593,6 +593,72 @@ router.post('/inject', authorize(['ADMIN', 'USER']), async (req, res) => {
     }
   });
 
+// POST /api/production/inject-avulso - Injetar peça avulsa SEM pedido num setor
+router.post('/inject-avulso', authorize(['ADMIN', 'USER']), async (req, res) => {
+  const { productId, productName, quantity, targetStepName, customization } = req.body;
+
+  try {
+    if (!productName || !targetStepName || !quantity || parseInt(quantity) <= 0) {
+      return res.status(400).json({ error: 'Informe nome da peça, quantidade e setor de destino.' });
+    }
+
+    const qtyToInject = parseInt(quantity);
+
+    const templates = await prisma.productionStepTemplate.findMany({
+      where: { isActive: true },
+      orderBy: { stepOrder: 'asc' },
+      include: { checklistItems: true }
+    });
+
+    const hasBorda = (productName as string).toLowerCase().includes('borda');
+    const filteredTemplates = hasBorda
+      ? templates
+      : templates.filter(t => t.name.toUpperCase() !== 'FINISHING');
+
+    const mappedTemplates = filteredTemplates.map((t, idx) => ({
+      ...t,
+      stepOrder: idx + 1
+    }));
+
+    const targetTemplate = mappedTemplates.find(t => t.name.toUpperCase() === (targetStepName as string).toUpperCase());
+    if (!targetTemplate) return res.status(400).json({ error: 'Setor de destino inválido' });
+
+    // Cria item avulso (sem pedido, isStock=true)
+    const item = await prisma.orderItem.create({
+      data: {
+        productId: productId || null,
+        productName: productName as string,
+        quantity: qtyToInject,
+        customization: customization || null,
+        isStock: true,
+        isStarted: true,
+        status: 'IN_PRODUCTION'
+      }
+    });
+
+    // Cria etapas, marcando anteriores como concluídas
+    await prisma.productionStep.createMany({
+      data: mappedTemplates.map(t => ({
+        orderItemId: item.id,
+        stepTemplateId: t.id,
+        stepName: t.name,
+        stepOrder: t.stepOrder,
+        estimatedMinutes: t.estimatedMinutes,
+        status: t.stepOrder < targetTemplate.stepOrder ? StepStatus.COMPLETED : StepStatus.PENDING,
+        completedQuantity: t.stepOrder < targetTemplate.stepOrder ? qtyToInject : 0,
+        completedAt: t.stepOrder < targetTemplate.stepOrder ? new Date() : null
+      }))
+    });
+
+    await createChecklistsForSteps(prisma, item.id, templates);
+
+    res.json({ message: `Peça avulsa injetada no setor ${targetStepName}`, itemId: item.id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao injetar peça avulsa' });
+  }
+});
+
 // PUT /api/production/steps/:stepId/checklist/:itemId - Toggle checklist item
 router.put('/steps/:stepId/checklist/:itemId', async (req, res) => {
   try {

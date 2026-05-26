@@ -16,7 +16,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import type { ProductionStep, Order } from '../types';
+import type { ProductionStep, Order, Product } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS } from '../types';
 import api from '../services/api';
 
@@ -34,11 +34,22 @@ export default function ProductionSectorPage() {
 
   // Estados para Entrada Manual
   const [showManual, setShowManual] = useState(false);
+  const [manualMode, setManualMode] = useState<'pedido' | 'avulso'>('avulso');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [manualForm, setManualForm] = useState({
     itemId: '',
     quantity: 1
+  });
+  // Catálogo para o modo avulso
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [selectedCatalogProduct, setSelectedCatalogProduct] = useState<Product | null>(null);
+  const [avulsoForm, setAvulsoForm] = useState({
+    productId: '',
+    productName: '',
+    quantity: 1,
+    selectedColor: '',
+    customization: ''
   });
 
   const stepName = sector?.toUpperCase() || '';
@@ -126,22 +137,52 @@ export default function ProductionSectorPage() {
 
   const handleOpenManual = () => {
     fetchOrders();
+    setManualMode('avulso');
+    setSelectedOrder(null);
+    setManualForm({ itemId: '', quantity: 1 });
+    setSelectedCatalogProduct(null);
+    setAvulsoForm({ productId: '', productName: '', quantity: 1, selectedColor: '', customization: '' });
+    // Carregar catálogo
+    api.get('/products').then(r => setCatalog(r.data)).catch(() => {});
     setShowManual(true);
   };
 
   const handleInject = async () => {
-    if (!manualForm.itemId) return toast.error('Selecione uma peça');
-    try {
-      await api.post('/production/inject', {
-        orderItemId: manualForm.itemId,
-        targetStepName: stepName,
-        quantity: manualForm.quantity
-      });
-      toast.success('Peça adicionada ao setor!');
-      setShowManual(false);
-      fetchSteps();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao adicionar peça');
+    if (manualMode === 'pedido') {
+      if (!manualForm.itemId) return toast.error('Selecione uma peça');
+      try {
+        await api.post('/production/inject', {
+          orderItemId: manualForm.itemId,
+          targetStepName: stepName,
+          quantity: manualForm.quantity
+        });
+        toast.success('Peça adicionada ao setor!');
+        setShowManual(false);
+        fetchSteps();
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Erro ao adicionar peça');
+      }
+    } else {
+      if (!avulsoForm.productName.trim()) return toast.error('Selecione ou informe o nome da peça');
+      if (avulsoForm.quantity < 1) return toast.error('Quantidade inválida');
+      // Monta observação combinando cor selecionada + texto livre
+      const colorPart = avulsoForm.selectedColor ? `Cor: ${avulsoForm.selectedColor}` : '';
+      const obsPart = avulsoForm.customization.trim();
+      const customization = [colorPart, obsPart].filter(Boolean).join(' | ') || undefined;
+      try {
+        await api.post('/production/inject-avulso', {
+          productId: avulsoForm.productId || undefined,
+          productName: avulsoForm.productName.trim(),
+          quantity: avulsoForm.quantity,
+          customization,
+          targetStepName: stepName
+        });
+        toast.success('Peça adicionada ao setor!');
+        setShowManual(false);
+        fetchSteps();
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Erro ao adicionar peça avulsa');
+      }
     }
   };
 
@@ -664,54 +705,195 @@ export default function ProductionSectorPage() {
       {/* MODAL DE ENTRADA MANUAL */}
       {showManual && (
         <div className="modal-overlay" onClick={() => setShowManual(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
              <div className="modal-header">
-                <h2 className="modal-title">Entrada Manual - {label}</h2>
+                <h2 className="modal-title">Entrada Manual — {label}</h2>
                 <button className="btn btn-ghost" onClick={() => setShowManual(false)}><X size={20}/></button>
              </div>
-             <div className="modal-body">
-                <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 20 }}>
-                  Use esta opção para puxar uma peça de um pedido diretamente para este setor, pulando etapas anteriores.
-                </p>
-                
-                <div className="form-group">
-                  <label className="form-label">Selecione o Pedido</label>
-                  <select className="form-input" onChange={(e) => {
-                    const order = orders.find(o => o.id === e.target.value);
-                    setSelectedOrder(order || null);
-                    setManualForm({ ...manualForm, itemId: '' });
-                  }}>
-                    <option value="">Selecione um pedido...</option>
-                    {orders.map(o => (
-                      <option key={o.id} value={o.id}>Pedido {o.orderNumber}</option>
-                    ))}
-                  </select>
-                </div>
 
-                {selectedOrder && (
-                  <div className="form-group">
-                    <label className="form-label">Selecione a Peça</label>
-                    <select className="form-input" value={manualForm.itemId} onChange={(e) => setManualForm({ ...manualForm, itemId: e.target.value })}>
-                      <option value="">Selecione...</option>
-                      {selectedOrder.items.map(item => (
-                        <option key={item.id} value={item.id}>{item.quantity}x {item.productName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label">Quantidade a Produzir neste Setor</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    min="1"
-                    max={selectedOrder?.items.find(i => i.id === manualForm.itemId)?.quantity || 1}
-                    value={manualForm.quantity}
-                    onChange={(e) => setManualForm({ ...manualForm, quantity: parseInt(e.target.value) || 1 })}
-                  />
-                </div>
+             {/* Abas de modo */}
+             <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', padding: '0 24px' }}>
+               {(['avulso', 'pedido'] as const).map(mode => (
+                 <button
+                   key={mode}
+                   type="button"
+                   onClick={() => setManualMode(mode)}
+                   style={{
+                     background: 'none',
+                     border: 'none',
+                     cursor: 'pointer',
+                     padding: '12px 20px',
+                     fontSize: 13,
+                     fontWeight: 700,
+                     color: manualMode === mode ? 'var(--color-primary)' : 'var(--color-text-3)',
+                     borderBottom: manualMode === mode ? '2px solid var(--color-primary)' : '2px solid transparent',
+                     marginBottom: -1,
+                     transition: 'all 0.15s ease'
+                   }}
+                 >
+                   {mode === 'avulso' ? '✏️ Avulso (sem pedido)' : '📦 Via Pedido'}
+                 </button>
+               ))}
              </div>
+
+             <div className="modal-body">
+               {manualMode === 'avulso' ? (
+                 <>
+                    <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 20 }}>
+                      Insira a peça diretamente neste setor sem necessidade de um pedido cadastrado.
+                    </p>
+
+                    {/* Seleção do produto do catálogo */}
+                    <div className="form-group">
+                      <label className="form-label">Produto do Catálogo *</label>
+                      <select
+                        className="form-input"
+                        value={avulsoForm.productId}
+                        onChange={e => {
+                          const prod = catalog.find(p => p.id === e.target.value);
+                          setSelectedCatalogProduct(prod || null);
+                          setAvulsoForm(f => ({
+                            ...f,
+                            productId: e.target.value,
+                            productName: prod?.name || '',
+                            selectedColor: ''
+                          }));
+                        }}
+                      >
+                        <option value="">Selecione do catálogo...</option>
+                        {catalog.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      {/* Nome manual se não encontrado no catálogo */}
+                      {!avulsoForm.productId && (
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ marginTop: 8 }}
+                          placeholder="Ou digite manualmente o nome da peça..."
+                          value={avulsoForm.productName}
+                          onChange={e => setAvulsoForm(f => ({ ...f, productName: e.target.value }))}
+                        />
+                      )}
+                    </div>
+
+                    {/* Detalhes do produto selecionado */}
+                    {selectedCatalogProduct?.details && selectedCatalogProduct.details.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16, marginTop: -8 }}>
+                        {selectedCatalogProduct.details.map(d => (
+                          <span key={d} style={{
+                            background: 'rgba(245,158,11,0.08)', color: 'var(--color-warning)',
+                            border: '1px solid rgba(245,158,11,0.2)', borderRadius: 20,
+                            padding: '2px 10px', fontSize: 11, fontWeight: 600
+                          }}>{d}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Seleção de cor (apenas se o produto tem cores cadastradas) */}
+                    {selectedCatalogProduct?.colors && selectedCatalogProduct.colors.length > 0 && (
+                      <div className="form-group">
+                        <label className="form-label">Cor da Peça</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                          {selectedCatalogProduct.colors.map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setAvulsoForm(f => ({ ...f, selectedColor: f.selectedColor === c ? '' : c }))}
+                              title={c}
+                              style={{
+                                width: 34, height: 34, borderRadius: 8,
+                                background: c,
+                                border: avulsoForm.selectedColor === c
+                                  ? '3px solid white'
+                                  : '2px solid rgba(255,255,255,0.15)',
+                                cursor: 'pointer',
+                                transform: avulsoForm.selectedColor === c ? 'scale(1.18)' : 'scale(1)',
+                                transition: 'all 0.15s ease',
+                                boxShadow: avulsoForm.selectedColor === c ? `0 0 10px ${c}66` : 'none'
+                              }}
+                            />
+                          ))}
+                        </div>
+                        {avulsoForm.selectedColor && (
+                          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ width: 12, height: 12, borderRadius: '50%', background: avulsoForm.selectedColor }} />
+                            Cor selecionada: <strong style={{ color: 'var(--color-text-1)' }}>{avulsoForm.selectedColor}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="form-group">
+                      <label className="form-label">Quantidade</label>
+                      <input
+                        type="number"
+                        className="form-input"
+                        min="1"
+                        value={avulsoForm.quantity}
+                        onChange={e => setAvulsoForm(f => ({ ...f, quantity: parseInt(e.target.value) || 1 }))}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Observação adicional (opcional)</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: Gravação nome, detalhe especial..."
+                        value={avulsoForm.customization}
+                        onChange={e => setAvulsoForm(f => ({ ...f, customization: e.target.value }))}
+                      />
+                    </div>
+                 </>
+               ) : (
+                 <>
+                   <p style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 20 }}>
+                     Puxe uma peça de um pedido diretamente para este setor, pulando etapas anteriores.
+                   </p>
+
+                   <div className="form-group">
+                     <label className="form-label">Selecione o Pedido</label>
+                     <select className="form-input" onChange={(e) => {
+                       const order = orders.find(o => o.id === e.target.value);
+                       setSelectedOrder(order || null);
+                       setManualForm({ ...manualForm, itemId: '' });
+                     }}>
+                       <option value="">Selecione um pedido...</option>
+                       {orders.map(o => (
+                         <option key={o.id} value={o.id}>Pedido {o.orderNumber}</option>
+                       ))}
+                     </select>
+                   </div>
+
+                   {selectedOrder && (
+                     <div className="form-group">
+                       <label className="form-label">Selecione a Peça</label>
+                       <select className="form-input" value={manualForm.itemId} onChange={(e) => setManualForm({ ...manualForm, itemId: e.target.value })}>
+                         <option value="">Selecione...</option>
+                         {selectedOrder.items.map(item => (
+                           <option key={item.id} value={item.id}>{item.quantity}x {item.productName}</option>
+                         ))}
+                       </select>
+                     </div>
+                   )}
+
+                   <div className="form-group">
+                     <label className="form-label">Quantidade a Produzir neste Setor</label>
+                     <input
+                       type="number"
+                       className="form-input"
+                       min="1"
+                       max={selectedOrder?.items.find(i => i.id === manualForm.itemId)?.quantity || 1}
+                       value={manualForm.quantity}
+                       onChange={(e) => setManualForm({ ...manualForm, quantity: parseInt(e.target.value) || 1 })}
+                     />
+                   </div>
+                 </>
+               )}
+             </div>
+
              <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setShowManual(false)}>Cancelar</button>
                 <button className="btn btn-primary" style={{ gap: 8 }} onClick={handleInject}>

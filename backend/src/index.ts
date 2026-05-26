@@ -5,6 +5,8 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
 
 import authRoutes from './routes/auth';
 import clientRoutes from './routes/clients';
@@ -108,6 +110,13 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Garantir que pasta de uploads existe
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// Servir arquivos estáticos de uploads (fotos dos produtos)
+app.use('/uploads', express.static(uploadsDir));
 
 // Health check
 app.get('/health', (_req, res) => {

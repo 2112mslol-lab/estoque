@@ -131,13 +131,13 @@ function CreateOrderModal({ order, onClose, onSaved }: {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-lg" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
+        <form onSubmit={handleSubmit}>
         <div className="modal-header">
           <h2 className="modal-title">{order ? 'Editar Entrada' : 'Nova Entrada de Produção'}</h2>
-          <button className="btn btn-ghost" onClick={onClose}>✕</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>✕</button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
+        <div className="modal-body">
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Cliente (Opcional)</label>
@@ -254,12 +254,12 @@ function CreateOrderModal({ order, onClose, onSaved }: {
       {showQuickClient && (
         <div className="modal-overlay" style={{ zIndex: 3000 }} onClick={() => setShowQuickClient(false)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <form onSubmit={handleSaveQuickClient}>
             <div className="modal-header">
               <h2 className="modal-title">Cadastro Rápido de Cliente</h2>
-              <button className="btn btn-ghost" onClick={() => setShowQuickClient(false)}>✕</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowQuickClient(false)}>✕</button>
             </div>
-            <form onSubmit={handleSaveQuickClient}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="form-group">
                   <label className="form-label">Nome Completo *</label>
                   <input 

@@ -73,7 +73,7 @@ export default function StockItemsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+      <div className="grid-stock">
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* SEARCH & FILTERS */}

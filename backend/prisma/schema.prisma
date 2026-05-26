@@ -13,13 +13,30 @@ datasource db {
 
 // ==================== CLIENTES ====================
 model Client {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  // Identificação
+  name        String
+  type        String   @default("PF") // PF ou PJ
+  cpfCnpj     String?  // CPF ou CNPJ
+  // Contato
+  email       String?
+  phone       String?  // Celular / WhatsApp principal
+  phone2      String?  // Telefone fixo / alternativo
+  instagram   String?  // @ do Instagram
+  // Endereço
+  zipCode     String?  // CEP
+  street      String?  // Logradouro
+  number      String?  // Número
+  complement  String?  // Complemento
+  neighborhood String? // Bairro
+  city        String?  // Cidade
+  state       String?  // UF
+  address     String?  // Campo legado / endereço completo
+  // Extras
+  notes       String?  // Observações internas
+  isVip       Boolean  @default(false) // Cliente VIP / prioritário
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   orders Order[]
 
@@ -91,6 +108,9 @@ model Product {
   id          String      @id @default(uuid())
   name        String      @unique
   description String?
+  colors      Json?       // Array de strings hex: ["#FF0000", "#00FF00"]
+  details     Json?       // Array de atributos: ["Vidro 6mm", "Jateado"]
+  imageUrl    String?     // Caminho relativo da foto: "uploads/products/uuid.jpg"
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

@@ -14,7 +14,8 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronRight,
-  Settings
+  Settings,
+  Menu
 } from 'lucide-react';
 
 import { useSocket } from './hooks/useSocket';
@@ -38,207 +39,179 @@ const ProductionQueuePage = lazy(() => import('./pages/ProductionQueuePage'));
 
 
 
-function Sidebar({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
+function Sidebar({ alertCount, onLogout, sectors, user, isOpen, onClose }: { alertCount: number, onLogout: () => void, sectors: any[], user: any, isOpen?: boolean, onClose?: () => void }) {
   const [showProduction, setShowProduction] = useState(true);
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
 
-  return (
-    <aside className="sidebar">
-      <div className="logo-container">
-        <img src="/logo.png" alt="Toque Ideal" style={{ height: 40, width: 'auto', marginRight: 12 }} />
-      </div>
-
-      <nav style={{ flex: 1, overflowY: 'auto' }}>
-        <button 
-          onClick={() => setShowProduction(!showProduction)} 
-          className="nav-link" 
-          style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', justifyContent: 'space-between' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Zap size={20} />
-            <span>Fábrica</span>
-          </div>
-          {showProduction ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </button>
-
-        {showProduction && (
-          <div style={{ marginLeft: 32, display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
-            {sectors.map((s, index) => (
-              <NavLink key={s.id} to={`/production/${s.name.toLowerCase()}`} className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
-                <span>{index + 1}. {STEP_LABELS[s.name.toUpperCase()] || s.name}</span>
-              </NavLink>
-            ))}
-          </div>
-        )}
-
-        <NavLink to="/kanban" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <Package size={20} />
-          <span>Fila Global</span>
-        </NavLink>
-        <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
-          <LayoutDashboard size={20} />
-          <span>Visão Geral</span>
-        </NavLink>
-        {user?.role === 'ADMIN' && (
-          <>
-            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <ClipboardList size={20} />
-              <span>Entradas</span>
-            </NavLink>
-            <NavLink to="/production-queue" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Zap size={20} style={{ color: 'var(--color-warning)' }} />
-              <span>Lançamento</span>
-            </NavLink>
-
-            <NavLink to="/order-control" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <CheckSquare size={20} />
-              <span>Expedição</span>
-            </NavLink>
-            <NavLink to="/stock-items" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Archive size={20} />
-              <span>Estoque</span>
-            </NavLink>
-            <NavLink to="/products" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Package size={20} />
-              <span>Catálogo</span>
-            </NavLink>
-            <NavLink to="/clients" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Users size={20} />
-              <span>Clientes</span>
-            </NavLink>
-            <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Settings size={20} />
-              <span>Ajustes</span>
-            </NavLink>
-
-          </>
-        )}
-        <NavLink to="/alerts" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <div style={{ position: 'relative', display: 'flex' }}>
-            <Bell size={20} />
-            {alertCount > 0 && <span className="alert-badge-count">{alertCount}</span>}
-          </div>
-          <span>Alertas</span>
-        </NavLink>
-      </nav>
-
-      <div style={{ padding: '20px 0', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ padding: '0 20px', marginBottom: 10 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operador:</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)' }}>{user?.name || 'Administrador'}</div>
-        </div>
-        <button className="nav-link" onClick={onLogout} style={{ border: 'none', background: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <LogOut size={20} />
-          <span>Sair do Sistema</span>
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-function MobileNav({ alertCount, onLogout, sectors }: { alertCount: number, onLogout: () => void, sectors: any[] }) {
-  const [showMore, setShowMore] = useState(false);
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
+  const handleLinkClick = () => {
+    if (onClose) onClose();
+  };
 
   return (
     <>
-      <nav className="mobile-nav">
-        <div className="mobile-nav-content">
-          <NavLink to="/kanban" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
-            <Zap size={22} />
-            <span>Produção</span>
+      {isOpen && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={onClose}
+        />
+      )}
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="logo-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 40 }}>
+          <img src="/logo.png" alt="Toque Ideal" style={{ height: 40, width: 'auto' }} />
+          {isOpen && (
+            <button 
+              onClick={onClose} 
+              className="btn btn-ghost" 
+              style={{ color: 'var(--color-text-2)', background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', padding: '4px 8px' }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <nav style={{ flex: 1, overflowY: 'auto' }}>
+          <button 
+            onClick={() => setShowProduction(!showProduction)} 
+            className="nav-link" 
+            style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Zap size={20} />
+              <span>Fábrica</span>
+            </div>
+            {showProduction ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+
+          {showProduction && (
+            <div style={{ marginLeft: 32, display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
+              {sectors.map((s, index) => (
+                <NavLink key={s.id} to={`/production/${s.name.toLowerCase()}`} onClick={handleLinkClick} className={({ isActive }) => `nav-link-sub ${isActive ? 'active' : ''}`}>
+                  <span>{index + 1}. {STEP_LABELS[s.name.toUpperCase()] || s.name}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+
+          <NavLink to="/kanban" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <Package size={20} />
+            <span>Fila Global</span>
           </NavLink>
-          <NavLink to="/" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} end>
-            <LayoutDashboard size={22} />
-            <span>Início</span>
+          <NavLink to="/" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
+            <LayoutDashboard size={20} />
+            <span>Visão Geral</span>
           </NavLink>
           {user?.role === 'ADMIN' && (
             <>
-              <NavLink to="/orders" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
-                <ClipboardList size={22} />
+              <NavLink to="/orders" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <ClipboardList size={20} />
                 <span>Entradas</span>
               </NavLink>
-              <NavLink to="/order-control" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
-                <CheckSquare size={22} />
+              <NavLink to="/production-queue" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <Zap size={20} style={{ color: 'var(--color-warning)' }} />
+                <span>Lançamento</span>
+              </NavLink>
+
+              <NavLink to="/order-control" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <CheckSquare size={20} />
                 <span>Expedição</span>
               </NavLink>
+              <NavLink to="/stock-items" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <Archive size={20} />
+                <span>Estoque</span>
+              </NavLink>
+              <NavLink to="/products" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <Package size={20} />
+                <span>Catálogo</span>
+              </NavLink>
+              <NavLink to="/clients" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <Users size={20} />
+                <span>Clientes</span>
+              </NavLink>
+              <NavLink to="/settings" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <Settings size={20} />
+                <span>Ajustes</span>
+              </NavLink>
+
             </>
           )}
-          <button 
-            className="mobile-nav-link" 
-            onClick={() => setShowMore(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-          >
+          <NavLink to="/alerts" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <div style={{ position: 'relative', display: 'flex' }}>
-              <Bell size={22} />
+              <Bell size={20} />
               {alertCount > 0 && <span className="alert-badge-count">{alertCount}</span>}
             </div>
-            <span>Menu</span>
+            <span>Alertas</span>
+          </NavLink>
+        </nav>
+
+        <div style={{ padding: '20px 0', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ padding: '0 20px', marginBottom: 10 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operador:</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)' }}>{user?.name || 'Administrador'}</div>
+          </div>
+          <button className="nav-link" onClick={() => { onLogout(); handleLinkClick(); }} style={{ border: 'none', background: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <LogOut size={20} />
+            <span>Sair do Sistema</span>
           </button>
         </div>
-      </nav>
-
-      {showMore && (
-        <div className="modal-overlay" onClick={() => setShowMore(false)}>
-          <div className="modal" style={{ marginBottom: 80, maxWidth: 320 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Menu</h2>
-              <button className="btn btn-ghost" onClick={() => setShowMore(false)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
-              <div style={{ padding: '8px 12px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', textTransform: 'uppercase' }}>Operador:</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)' }}>{user?.name || 'Administrador'}</div>
-              </div>
-
-              <NavLink to="/alerts" className="nav-link" onClick={() => setShowMore(false)}>
-                <Bell size={20} />
-                <span>Alertas ({alertCount})</span>
-              </NavLink>
-              {user?.role === 'ADMIN' && (
-                <NavLink to="/stock-items" className="nav-link" onClick={() => setShowMore(false)}>
-                  <Archive size={20} />
-                  <span>Estoque</span>
-                </NavLink>
-              )}
-              {user?.role === 'ADMIN' && (
-                <>
-                  <NavLink to="/products" className="nav-link" onClick={() => setShowMore(false)}>
-                    <Package size={20} />
-                    <span>Catálogo</span>
-                  </NavLink>
-                  <NavLink to="/clients" className="nav-link" onClick={() => setShowMore(false)}>
-                    <Users size={20} />
-                    <span>Clientes</span>
-                  </NavLink>
-                </>
-              )}
-
-              <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 8, paddingLeft: 12 }}>SETORES DA FÁBRICA</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {sectors.map(s => (
-                      <NavLink key={s.id} to={`/production/${s.name.toLowerCase()}`} className="nav-link-sub" onClick={() => setShowMore(false)}>
-                        {STEP_LABELS[s.name.toUpperCase()] || s.name}
-                      </NavLink>
-                    ))}
-                </div>
-              </div>
-              
-              <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 12, paddingTop: 12 }}>
-                <button className="nav-link" onClick={() => { onLogout(); setShowMore(false); }} style={{ border: 'none', background: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--color-danger)' }}>
-                  <LogOut size={20} />
-                  <span>Sair do Sistema</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
+      </aside>
     </>
+  );
+}
+
+function MobileHeader({ onOpenSidebar }: { onOpenSidebar: () => void }) {
+  return (
+    <header className="mobile-header">
+      <button className="mobile-menu-btn" onClick={onOpenSidebar}>
+        <Menu size={24} />
+      </button>
+      <div className="mobile-logo">
+        <img src="/logo.png" alt="Toque Ideal" style={{ height: 28, width: 'auto' }} />
+      </div>
+      <div style={{ width: 24 }}></div>
+    </header>
+  );
+}
+
+function MobileNav({ alertCount, user, onOpenSidebar }: { alertCount: number, user: any, onOpenSidebar: () => void }) {
+  useEffect(() => {
+    console.log("MobileNav mounted. Screen width:", window.innerWidth);
+  }, []);
+
+  return (
+    <nav className="mobile-nav">
+      <div className="mobile-nav-content">
+        <NavLink to="/kanban" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+          <Zap size={22} />
+          <span>Produção</span>
+        </NavLink>
+        <NavLink to="/" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} end>
+          <LayoutDashboard size={22} />
+          <span>Início</span>
+        </NavLink>
+        {user?.role === 'ADMIN' && (
+          <>
+            <NavLink to="/orders" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+              <ClipboardList size={22} />
+              <span>Entradas</span>
+            </NavLink>
+            <NavLink to="/order-control" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+              <CheckSquare size={22} />
+              <span>Expedição</span>
+            </NavLink>
+          </>
+        )}
+        <button 
+          className="mobile-nav-link" 
+          onClick={onOpenSidebar}
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <div style={{ position: 'relative', display: 'flex' }}>
+            <Bell size={22} />
+            {alertCount > 0 && <span className="alert-badge-count">{alertCount}</span>}
+          </div>
+          <span>Menu</span>
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -247,6 +220,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [alertCount, setAlertCount] = useState(0);
   const [sectors, setSectors] = useState<any[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { subscribe } = useSocket();
 
   useEffect(() => {
@@ -301,32 +275,42 @@ export default function App() {
                   <Toaster position="top-right" />
                 </>
               ) : (
-                <div className="app-container">
-                  <Sidebar alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
-                  
-                  <main className="main-content">
-                    <Routes>
-                      <Route path="/" element={<DashboardPage />} />
-                      <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
-                      <Route path="/production-queue" element={user?.role === 'ADMIN' ? <ProductionQueuePage /> : <Navigate to="/" />} />
+                <>
+                  <MobileHeader onOpenSidebar={() => setSidebarOpen(true)} />
+                  <div className="app-container">
+                    <Sidebar 
+                      alertCount={alertCount} 
+                      onLogout={handleLogout} 
+                      sectors={sectors} 
+                      user={user} 
+                      isOpen={sidebarOpen}
+                      onClose={() => setSidebarOpen(false)}
+                    />
+                    
+                    <main className="main-content">
+                      <Routes>
+                        <Route path="/" element={<DashboardPage />} />
+                        <Route path="/orders" element={user?.role === 'ADMIN' ? <OrdersPage /> : <Navigate to="/" />} />
+                        <Route path="/production-queue" element={user?.role === 'ADMIN' ? <ProductionQueuePage /> : <Navigate to="/" />} />
 
-                      <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
-                      <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
-                      <Route path="/kanban" element={<KanbanPage />} />
-                      <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
-                      <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
-                      <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
-                      <Route path="/settings" element={user?.role === 'ADMIN' ? <SettingsPage /> : <Navigate to="/" />} />
-                      <Route path="/production/:sector" element={<ProductionSectorPage />} />
+                        <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
+                        <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
+                        <Route path="/kanban" element={<KanbanPage />} />
+                        <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
+                        <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
+                        <Route path="/clients" element={user?.role === 'ADMIN' ? <ClientsPage /> : <Navigate to="/" />} />
+                        <Route path="/settings" element={user?.role === 'ADMIN' ? <SettingsPage /> : <Navigate to="/" />} />
+                        <Route path="/production/:sector" element={<ProductionSectorPage />} />
 
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </main>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                      </Routes>
+                    </main>
+                  </div>
 
-                  <MobileNav alertCount={alertCount} onLogout={handleLogout} sectors={sectors} />
+                  <MobileNav alertCount={alertCount} user={user} onOpenSidebar={() => setSidebarOpen(true)} />
                   <Toaster position="top-right" />
                   <CommandPalette />
-                </div>
+                </>
               )
             } 
           />
