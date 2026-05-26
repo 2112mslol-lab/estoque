@@ -555,10 +555,11 @@ tr:hover td {
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
   z-index: 2000;
-  padding: 16px;
+  padding: 80px 16px 40px 16px;
 }
 
 .modal {
@@ -722,6 +723,9 @@ tr:hover td {
   }
   .page-title {
     font-size: 1.4rem;
+  }
+  .modal-overlay {
+    padding: 30px 12px 20px 12px;
   }
 }
 
