@@ -469,11 +469,11 @@ export default function ProductsPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <form onSubmit={handleCreate}>
-            <div className="modal-header">
-              <h2 className="modal-title">Novo Modelo de Produto</h2>
-              <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div className="modal-header">
+                <h2 className="modal-title">Novo Modelo de Produto</h2>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
                 {/* Foto (upload antecipado com preview) */}
                 <div className="form-group">

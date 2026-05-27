@@ -392,12 +392,12 @@ export default function ClientsPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" style={{ maxWidth: 620 }} onClick={e => e.stopPropagation()}>
             <form onSubmit={handleSubmit}>
-            <div className="modal-header">
-              <h2 className="modal-title">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h2>
-              <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}><X size={20} /></button>
-            </div>
+              <div className="modal-header">
+                <h2 className="modal-title">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}><X size={20} /></button>
+              </div>
 
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
               {/* ── Seção: Identificação ── */}
               <div>
@@ -577,14 +577,14 @@ export default function ClientsPage() {
                   style={{ resize: 'vertical' }} />
               </div>
 
-            </div>
+              </div>
 
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'Salvando...' : editingClient ? 'Salvar Alterações' : 'Cadastrar Cliente'}
-              </button>
-            </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? 'Salvando...' : editingClient ? 'Salvar Alterações' : 'Cadastrar Cliente'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
