@@ -558,7 +558,7 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  padding: 24px 16px;
+  padding: 32px 16px;
   box-sizing: border-box;
 }
 
@@ -568,21 +568,27 @@ tr:hover td {
   border: 1px solid var(--color-border);
   width: 100%;
   max-width: 520px;
-  height: auto;
-  max-height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
   position: relative;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling for modal */
+.modal::-webkit-scrollbar {
+  width: 4px;
+}
+.modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
 }
 
 .modal > form {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  display: block;
 }
 
 .modal-lg {
@@ -595,14 +601,15 @@ tr:hover td {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-surface-2);
+  border-radius: 20px 20px 0 0;
 }
 
 .modal-body {
   padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
 }
 
 .modal-footer {
@@ -611,7 +618,10 @@ tr:hover td {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--color-surface-2);
+  border-radius: 0 0 20px 20px;
 }
 
 .form-grid {
