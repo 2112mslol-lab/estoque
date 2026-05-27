@@ -14,4 +14,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Interceptor para detectar token expirado (401) e fazer logout automático
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const currentToken = localStorage.getItem('token');
+      if (currentToken) {
+        // Token existe mas é inválido/expirado — limpa e redireciona
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
