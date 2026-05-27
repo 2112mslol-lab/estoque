@@ -567,22 +567,15 @@ tr:hover td {
   border-radius: 20px;
   border: 1px solid var(--color-border);
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
   max-height: calc(100vh - 140px);
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
   position: relative;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
 }
 
 .modal > form {
-  display: flex;
-  flex-direction: column;
-  max-height: 100%;
-  overflow: hidden;
-  min-height: 0;
-  flex: 1;
+  display: block;
 }
 
 .modal-lg {
@@ -595,14 +588,10 @@ tr:hover td {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
 }
 
 .modal-footer {
@@ -611,7 +600,6 @@ tr:hover td {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  flex-shrink: 0;
 }
 
 .form-grid {
