@@ -13,9 +13,9 @@ export function getSocket(): Socket {
     const socketUrl = isProd ? window.location.origin : `http://${host}:3001`;
 
     socket = io(socketUrl, {
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
+      reconnection: !isProd, // Não tenta reconectar em prod (Vercel) para não floodar de erros
+      reconnectionAttempts: isProd ? 0 : 10,
+      autoConnect: !isProd, // Desliga auto-connect na Vercel
       transports: ['websocket', 'polling'] 
     });
 
