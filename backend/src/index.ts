@@ -115,7 +115,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Garantir que pasta de uploads existe
 const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+} catch (error) {
+  console.warn('⚠️ Impossível criar pasta uploads (ambiente read-only da Vercel)');
+}
 
 // Servir arquivos estáticos de uploads (fotos dos produtos)
 app.use('/uploads', express.static(uploadsDir));
