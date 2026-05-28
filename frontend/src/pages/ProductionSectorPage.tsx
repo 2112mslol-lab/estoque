@@ -10,7 +10,8 @@ import {
   Play,
   Search,
   Filter,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 import { format } from 'date-fns';
@@ -18,6 +19,7 @@ import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { ProductionStep, Order, Product } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS } from '../types';
+import { parseBorderType, BorderType, buildCustomization } from '../types/parseBorder';
 import api from '../services/api';
 
 export default function ProductionSectorPage() {
@@ -49,8 +51,14 @@ export default function ProductionSectorPage() {
     productName: '',
     quantity: 1,
     selectedColor: '',
+    borderType: null as BorderType,
     customization: ''
   });
+
+  // Estados para Modais de Ação
+  const [itemToDelete, setItemToDelete] = useState<ProductionStep | null>(null);
+  const [itemToDefect, setItemToDefect] = useState<ProductionStep | null>(null);
+  const [defectReason, setDefectReason] = useState('');
 
   const stepName = sector?.toUpperCase() || '';
   const label = STEP_LABELS[stepName] || sector || 'Setor';
@@ -135,13 +143,38 @@ export default function ProductionSectorPage() {
     return !step.checklistItems || step.checklistItems.every(c => !c.isMandatory || c.isChecked);
   };
 
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+    try {
+      await api.delete(`/production/items/${itemToDelete.orderItemId}`);
+      toast.success('Item excluído com sucesso');
+      setItemToDelete(null);
+      fetchSteps();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao excluir item');
+    }
+  };
+
+  const handleReportDefect = async () => {
+    if (!itemToDefect || !defectReason.trim()) return toast.error('Informe o motivo do defeito');
+    try {
+      await api.post(`/production/steps/${itemToDefect.id}/defect`, { reason: defectReason });
+      toast.success('Defeito registrado. Peça retornou para a fila inicial.');
+      setItemToDefect(null);
+      setDefectReason('');
+      fetchSteps();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao registrar defeito');
+    }
+  };
+
   const handleOpenManual = () => {
     fetchOrders();
     setManualMode('avulso');
     setSelectedOrder(null);
     setManualForm({ itemId: '', quantity: 1 });
     setSelectedCatalogProduct(null);
-    setAvulsoForm({ productId: '', productName: '', quantity: 1, selectedColor: '', customization: '' });
+    setAvulsoForm({ productId: '', productName: '', quantity: 1, selectedColor: '', borderType: null, customization: '' });
     // Carregar catálogo
     api.get('/products').then(r => setCatalog(r.data)).catch(() => {});
     setShowManual(true);
@@ -168,7 +201,8 @@ export default function ProductionSectorPage() {
       // Monta observação combinando cor selecionada + texto livre
       const colorPart = avulsoForm.selectedColor ? `Cor: ${avulsoForm.selectedColor}` : '';
       const obsPart = avulsoForm.customization.trim();
-      const customization = [colorPart, obsPart].filter(Boolean).join(' | ') || undefined;
+      const restText = [colorPart, obsPart].filter(Boolean).join(' | ');
+      const customization = buildCustomization(avulsoForm.borderType, restText) || undefined;
       try {
         await api.post('/production/inject-avulso', {
           productId: avulsoForm.productId || undefined,
@@ -329,6 +363,7 @@ export default function ProductionSectorPage() {
         )}
 
         {filteredSteps.map((step) => {
+          const { border: borderType, rest: customizationText } = parseBorderType(step.item?.customization);
           const startedAt = step.startedAt ? new Date(step.startedAt) : null;
           const elapsedMin = startedAt ? (Date.now() - startedAt.getTime()) / 60000 : 0;
           const isDelayed = step.status === 'IN_PROGRESS' && elapsedMin > step.estimatedMinutes;
@@ -348,6 +383,7 @@ export default function ProductionSectorPage() {
                 position: 'relative', 
                 overflow: 'hidden',
                 border: isFirstInQueue ? '2px solid var(--color-warning)' : hasUrgency ? '2px solid var(--color-danger)' : '1px solid var(--color-border)',
+                borderLeft: borderType === 'COM_BORDA' ? '6px solid var(--color-warning)' : borderType === 'SEM_BORDA' ? '6px solid #475569' : undefined,
                 boxShadow: isFirstInQueue ? '0 0 15px rgba(245, 158, 11, 0.15)' : hasUrgency ? '0 0 15px rgba(239, 68, 68, 0.1)' : undefined,
                 display: 'flex',
                 flexDirection: 'column',
@@ -408,7 +444,60 @@ export default function ProductionSectorPage() {
                      <div style={{ fontSize: 17, fontWeight: 800, color: 'white', lineHeight: 1.3 }}>
                        {step.item?.productName}
                      </div>
-                  </div>
+
+                     {/* Cor / Personalização e Tipo de Borda — destaque visual para o operador */}
+                     <div style={{
+                       marginTop: 10,
+                       display: 'flex',
+                       flexDirection: 'column',
+                       gap: 8,
+                     }}>
+                       {/* Badge de Borda */}
+                       {borderType && (
+                         <div style={{
+                           display: 'inline-flex', alignItems: 'center', gap: 6,
+                           background: borderType === 'COM_BORDA' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)',
+                           border: borderType === 'COM_BORDA' ? '1.5px solid var(--color-warning)' : '1px solid rgba(255,255,255,0.1)',
+                           color: borderType === 'COM_BORDA' ? 'var(--color-warning)' : 'var(--color-text-3)',
+                           padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 800,
+                           alignSelf: 'flex-start'
+                         }}>
+                           {borderType === 'COM_BORDA' ? '🔲 COM BORDA' : '⬜ SEM BORDA'}
+                         </div>
+                       )}
+
+                       {/* Extrai cor hexadecimal se houver "Cor: #XXXXXX" */}
+                       {customizationText && (() => {
+                         const hexMatch = customizationText.match(/#([0-9A-Fa-f]{6})\b/);
+                         const hex = hexMatch ? hexMatch[0] : null;
+                         return (
+                           <div style={{
+                             display: 'inline-flex',
+                             alignItems: 'center',
+                             gap: 8,
+                             background: 'rgba(59,130,246,0.10)',
+                             border: '1.5px solid rgba(59,130,246,0.35)',
+                             borderRadius: 8,
+                             padding: '7px 12px',
+                             fontSize: 13,
+                             fontWeight: 800,
+                             color: '#60a5fa',
+                             maxWidth: '100%',
+                             alignSelf: 'flex-start',
+                           }}>
+                             🎨
+                             {hex && (
+                               <span style={{
+                                 display: 'inline-block', width: 18, height: 18, borderRadius: 4,
+                                 background: hex, border: '2px solid rgba(255,255,255,0.25)', flexShrink: 0,
+                               }} title={hex} />
+                             )}
+                             <span style={{ wordBreak: 'break-word' }}>{customizationText}</span>
+                           </div>
+                         );
+                       })()}
+                     </div>
+                   </div>
                   
                   <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 800, textTransform: 'uppercase' }}>TÉCNICO</div>
@@ -692,8 +781,26 @@ export default function ProductionSectorPage() {
                       <Clock size={12} />
                       <span>Entrega: {deliveryDate ? format(deliveryDate, "dd/MM", { locale: ptBR }) : '---'}</span>
                    </div>
-                   <div style={{ fontSize: 10, fontWeight: 700, color: isDelayed ? 'var(--color-danger)' : 'var(--color-text-3)' }}>
-                      Meta: {step.estimatedMinutes} min
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                     <button
+                       className="btn btn-ghost"
+                       style={{ padding: '6px', color: 'var(--color-warning)' }}
+                       onClick={() => setItemToDefect(step)}
+                       title="Relatar Defeito e Refazer"
+                     >
+                       <AlertTriangle size={14} />
+                     </button>
+                     <button
+                       className="btn btn-ghost"
+                       style={{ padding: '6px', color: 'var(--color-danger)' }}
+                       onClick={() => setItemToDelete(step)}
+                       title="Excluir Peça"
+                     >
+                       <Trash2 size={14} />
+                     </button>
+                     <div style={{ fontSize: 10, fontWeight: 700, color: isDelayed ? 'var(--color-danger)' : 'var(--color-text-3)', marginLeft: 8 }}>
+                        Meta: {step.estimatedMinutes} min
+                     </div>
                    </div>
                 </div>
               </div>
@@ -825,6 +932,39 @@ export default function ProductionSectorPage() {
                       </div>
                     )}
 
+                    {/* Seleção do Tipo de Borda */}
+                    <div className="form-group" style={{ marginBottom: 16 }}>
+                      <label className="form-label">Tipo de Borda *</label>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                          type="button"
+                          className={`btn ${avulsoForm.borderType === 'SEM_BORDA' ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            flex: 1, padding: '10px', fontWeight: 700, fontSize: 13,
+                            border: avulsoForm.borderType === 'SEM_BORDA' ? '2px solid var(--color-primary)' : '2px solid var(--color-border)',
+                            background: avulsoForm.borderType === 'SEM_BORDA' ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                            color: avulsoForm.borderType === 'SEM_BORDA' ? 'var(--color-primary)' : 'var(--color-text-2)'
+                          }}
+                          onClick={() => setAvulsoForm(f => ({ ...f, borderType: 'SEM_BORDA' }))}
+                        >
+                          ⬜ Sem Borda
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn ${avulsoForm.borderType === 'COM_BORDA' ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            flex: 1, padding: '10px', fontWeight: 700, fontSize: 13,
+                            border: avulsoForm.borderType === 'COM_BORDA' ? '2px solid var(--color-warning)' : '2px solid var(--color-border)',
+                            background: avulsoForm.borderType === 'COM_BORDA' ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                            color: avulsoForm.borderType === 'COM_BORDA' ? 'var(--color-warning)' : 'var(--color-text-2)'
+                          }}
+                          onClick={() => setAvulsoForm(f => ({ ...f, borderType: 'COM_BORDA' }))}
+                        >
+                          🔲 Com Borda
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="form-group">
                       <label className="form-label">Quantidade</label>
                       <input
@@ -900,6 +1040,59 @@ export default function ProductionSectorPage() {
                   <Play size={16} fill="white" /> Injetar no Setor
                 </button>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EXCLUSÃO */}
+      {itemToDelete && (
+        <div className="modal-overlay" onClick={() => setItemToDelete(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ color: 'var(--color-danger)' }}>Excluir Peça</h2>
+              <button className="btn btn-ghost" onClick={() => setItemToDelete(null)}><X size={20}/></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--color-text-2)', marginBottom: 20 }}>
+                Tem certeza que deseja excluir esta peça da produção? Esta ação não pode ser desfeita.
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" onClick={() => setItemToDelete(null)}>Cancelar</button>
+                <button className="btn btn-danger" onClick={handleDeleteItem}>Sim, Excluir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DEFEITO */}
+      {itemToDefect && (
+        <div className="modal-overlay" onClick={() => setItemToDefect(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ color: 'var(--color-warning)' }}>Relatar Defeito</h2>
+              <button className="btn btn-ghost" onClick={() => setItemToDefect(null)}><X size={20}/></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--color-text-2)', marginBottom: 16 }}>
+                Esta peça será marcada com defeito e retornará para a primeira etapa da produção.
+              </p>
+              <div className="form-group">
+                <label className="form-label">Qual o motivo do defeito?</label>
+                <textarea
+                  className="form-input"
+                  style={{ minHeight: 80, resize: 'vertical' }}
+                  placeholder="Ex: Peça arranhada, quebrou na borda, etc."
+                  value={defectReason}
+                  onChange={e => setDefectReason(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
+                <button className="btn btn-secondary" onClick={() => setItemToDefect(null)}>Cancelar</button>
+                <button className="btn btn-primary" style={{ background: 'var(--color-warning)', color: 'black' }} onClick={handleReportDefect}>Confirmar Retorno</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

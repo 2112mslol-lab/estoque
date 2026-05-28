@@ -693,4 +693,66 @@ router.put('/reorder', authorize(['ADMIN']), async (req, res) => {
     }
   });
 
+// DELETE /api/production/items/:orderItemId - Excluir item de produção
+router.delete('/items/:orderItemId', authorize(['ADMIN', 'USER']), async (req, res) => {
+  const { orderItemId } = req.params;
+  try {
+    const item = await prisma.orderItem.findUnique({ where: { id: orderItemId } });
+    if (!item) return res.status(404).json({ error: 'Item não encontrado' });
+
+    // Exclui o item (as etapas de produção vinculadas serão deletadas em cascata pelo Prisma)
+    await prisma.orderItem.delete({
+      where: { id: orderItemId }
+    });
+
+    res.json({ message: 'Item excluído com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao excluir item' });
+  }
+});
+
+// POST /api/production/steps/:id/defect - Relatar defeito e retornar ao início
+router.post('/steps/:id/defect', authorize(['ADMIN', 'USER']), async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  try {
+    const step = await prisma.productionStep.findUnique({
+      where: { id },
+      include: { item: true }
+    });
+    if (!step) return res.status(404).json({ error: 'Etapa não encontrada' });
+
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ error: 'O motivo do defeito é obrigatório.' });
+    }
+
+    // Atualiza a customização/observação do item com a flag de defeito
+    const defectNote = `[⚠️ DEFEITO: ${reason.trim()}]`;
+    const newCustomization = step.item.customization 
+      ? `${defectNote} | ${step.item.customization}` 
+      : defectNote;
+
+    await prisma.orderItem.update({
+      where: { id: step.orderItemId },
+      data: { customization: newCustomization }
+    });
+
+    // Retorna todas as etapas deste item para PENDING
+    await prisma.productionStep.updateMany({
+      where: { orderItemId: step.orderItemId },
+      data: {
+        status: StepStatus.PENDING,
+        completedQuantity: 0,
+        startedAt: null,
+        completedAt: null
+      }
+    });
+
+    res.json({ message: 'Defeito registrado e peça retornada para o início da fila.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao registrar defeito' });
+  }
+});
+
 export default router;

@@ -40,7 +40,9 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // Funções para garantir que os usuários iniciais existam
 async function ensureInitialUsers() {
@@ -108,8 +110,8 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production' ? allowedOrigin : true,
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Garantir que pasta de uploads existe
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -117,6 +119,7 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 // Servir arquivos estáticos de uploads (fotos dos produtos)
 app.use('/uploads', express.static(uploadsDir));
+app.use('/api/uploads', express.static(uploadsDir)); // Fallback para URLs no frontend que usam /api como base
 
 // Health check
 app.get('/health', (_req, res) => {

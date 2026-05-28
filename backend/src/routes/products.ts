@@ -23,11 +23,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const allowed = [
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif', 
+      'image/svg+xml', 'image/bmp', 'image/heic', 'image/heif',
+      'application/pdf'
+    ];
     if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Formato de imagem inválido. Use JPEG, PNG, WEBP ou GIF.'));
+    else cb(new Error('Formato inválido. Use JPEG, PNG, WEBP, GIF, SVG, BMP, HEIC, HEIF ou PDF.'));
   },
 });
 

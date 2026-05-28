@@ -21,7 +21,7 @@ export interface Client {
   createdAt?: string;
 }
 
-export type OrderStatus = 'PENDING' | 'IN_PRODUCTION' | 'FINISHED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus = 'PENDING' | 'IN_PRODUCTION' | 'FINISHED' | 'WAITING_CONFIRMATION' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
 
 export interface Order {
   id: string;

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Eye, X, Share2, Star } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Eye, X, Share2, Star, ShoppingBag, Check, XCircle, MessageCircle } from 'lucide-react';
+
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { Order, Client, Product, OrderStatus } from '../types';
 import { ORDER_STATUS_LABELS } from '../types';
+import { parseBorderType, buildCustomization, BorderType } from '../types/parseBorder';
 import api from '../services/api';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -22,6 +24,7 @@ interface OrderItemForm {
   productId: string;
   productName: string;
   customization: string;
+  borderType: BorderType;
   quantity: number;
 }
 
@@ -40,12 +43,16 @@ function CreateOrderModal({ order, onClose, onSaved }: {
   });
   
   const [items, setItems] = useState<OrderItemForm[]>(
-    order?.items?.map(i => ({ 
-      productId: i.productId,
-      productName: i.productName, 
-      customization: i.customization || '', 
-      quantity: i.quantity 
-    })) || [{ productId: '', productName: '', customization: '', quantity: 1 }]
+    order?.items?.map(i => {
+      const { border, rest } = parseBorderType(i.customization);
+      return { 
+        productId: i.productId,
+        productName: i.productName, 
+        customization: rest, 
+        borderType: border,
+        quantity: i.quantity 
+      };
+    }) || [{ productId: '', productName: '', customization: '', borderType: null, quantity: 1 }]
   );
 
   const [loading, setLoading] = useState(false);
@@ -64,7 +71,7 @@ function CreateOrderModal({ order, onClose, onSaved }: {
   }, []);
 
   const handleAddItem = () => {
-    setItems([...items, { productId: '', productName: '', customization: '', quantity: 1 }]);
+    setItems([...items, { productId: '', productName: '', customization: '', borderType: null, quantity: 1 }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -112,7 +119,11 @@ function CreateOrderModal({ order, onClose, onSaved }: {
     
     setLoading(true);
     try {
-      const payload = { ...form, items };
+      const payloadItems = items.map(i => ({
+        ...i,
+        customization: buildCustomization(i.borderType, i.customization)
+      }));
+      const payload = { ...form, items: payloadItems };
       if (order) {
         await api.put(`/orders/${order.id}`, payload);
         toast.success('Pedido atualizado');
@@ -197,8 +208,44 @@ function CreateOrderModal({ order, onClose, onSaved }: {
                         {catalog.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 4 }}>
+                      <label className="form-label" style={{ marginBottom: 8 }}>Tipo de Borda *</label>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                          type="button"
+                          className={`btn ${item.borderType === 'SEM_BORDA' ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            fontWeight: 800,
+                            border: item.borderType === 'SEM_BORDA' ? '2px solid var(--color-primary)' : '2px solid var(--color-border)',
+                            background: item.borderType === 'SEM_BORDA' ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                            color: item.borderType === 'SEM_BORDA' ? 'var(--color-primary)' : 'var(--color-text-2)'
+                          }}
+                          onClick={() => handleItemChange(index, 'borderType', 'SEM_BORDA')}
+                        >
+                          ⬜ Sem Borda
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn ${item.borderType === 'COM_BORDA' ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            fontWeight: 800,
+                            border: item.borderType === 'COM_BORDA' ? '2px solid var(--color-warning)' : '2px solid var(--color-border)',
+                            background: item.borderType === 'COM_BORDA' ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                            color: item.borderType === 'COM_BORDA' ? 'var(--color-warning)' : 'var(--color-text-2)'
+                          }}
+                          onClick={() => handleItemChange(index, 'borderType', 'COM_BORDA')}
+                        >
+                          🔲 Com Borda
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="form-group">
-                      <label className="form-label">Obs. Personalização</label>
+                      <label className="form-label">Obs. Personalização / Cor</label>
                       <input 
                         className="form-input" 
                         placeholder="Ex: Cor Ámbar"
@@ -540,12 +587,55 @@ export default function OrdersPage() {
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}>Sincronizando logistica...</td></tr>
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>Nenhum pedido em fluxo agora.</td></tr>
-            ) : filtered.map(order => (
-              <tr key={order.id} style={{ background: 'rgba(255,255,255,0.01)' }}>
+            ) : filtered.map(order => {
+              const isCatalog = order.status === 'WAITING_CONFIRMATION' && order.orderNumber?.startsWith('CAT-');
+              return (
+              <tr key={order.id} style={{ background: isCatalog ? 'rgba(249,115,22,0.04)' : 'rgba(255,255,255,0.01)' }}>
                 <td>
+                  {isCatalog ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        background: 'rgba(249,115,22,0.15)', color: '#f97316',
+                        border: '1px solid rgba(249,115,22,0.3)',
+                        borderRadius: 6, fontSize: 10, fontWeight: 800,
+                        padding: '3px 8px', textTransform: 'uppercase',
+                      }}>
+                        <ShoppingBag size={10} /> Via Catálogo
+                      </span>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          id={`approve-order-${order.id}`}
+                          title="Aprovar pedido"
+                          onClick={() => handleUpdateStatus(order.id, 'PENDING' as any)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            background: 'rgba(16,185,129,0.15)', color: '#10b981',
+                            border: '1px solid rgba(16,185,129,0.3)',
+                            borderRadius: 6, fontSize: 10, fontWeight: 700, padding: '4px 8px', cursor: 'pointer'
+                          }}
+                        >
+                          <Check size={10} /> Aprovar
+                        </button>
+                        <button
+                          id={`reject-order-${order.id}`}
+                          title="Rejeitar pedido"
+                          onClick={() => handleUpdateStatus(order.id, 'CANCELLED' as any)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                            border: '1px solid rgba(239,68,68,0.25)',
+                            borderRadius: 6, fontSize: 10, fontWeight: 700, padding: '4px 8px', cursor: 'pointer'
+                          }}
+                        >
+                          <XCircle size={10} /> Rejeitar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                    <select 
                      value={order.status}
-                     onChange={(e) => handleUpdateStatus(order.id, e.target.value as OrderStatus)}
+                     onChange={(e) => handleUpdateStatus(order.id, e.target.value as any)}
                      style={{ 
                        background: STATUS_COLORS[order.status] || 'var(--color-surface-3)',
                        color: 'white',
@@ -565,6 +655,7 @@ export default function OrdersPage() {
                        </option>
                      ))}
                    </select>
+                  )}
                 </td>
                  <td>
                    <button 
@@ -575,10 +666,25 @@ export default function OrdersPage() {
                      <Star size={18} fill={order.isPriority ? 'currentColor' : 'none'} />
                    </button>
                  </td>
-                 <td style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{order.orderNumber}</td>
+                 <td style={{ fontWeight: 800, color: 'var(--color-primary)' }}>
+                   {order.orderNumber}
+                   {isCatalog && (
+                     <div style={{ fontSize: 10, color: '#64748b', fontWeight: 400, marginTop: 2 }}>Aguardando confirmação</div>
+                   )}
+                 </td>
 
                  <td style={{ fontWeight: 600 }}>
-                   {order.client?.name || <span style={{ color: 'var(--color-text-3)', fontSize: 11, fontWeight: 400 }}>📦 Venda Avulsa / Estoque</span>}
+                   {isCatalog ? (
+                     <div style={{ fontSize: 12 }}>
+                       {/* Extrai nome do cliente das notes */}
+                       {order.notes?.split('\n').find((l: string) => l.startsWith('Cliente:'))?.replace('Cliente: ', '') || 'Cliente Externo'}
+                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                         {order.notes?.split('\n').find((l: string) => l.startsWith('WhatsApp:'))?.replace('WhatsApp: ', '')}
+                       </div>
+                     </div>
+                   ) : (
+                     order.client?.name || <span style={{ color: 'var(--color-text-3)', fontSize: 11, fontWeight: 400 }}>📦 Venda Avulsa / Estoque</span>
+                   )}
                  </td>
                 
                 <td>
@@ -598,6 +704,24 @@ export default function OrdersPage() {
 
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
+                    {isCatalog && (() => {
+                      const waLine = order.notes?.split('\n').find((l: string) => l.startsWith('WhatsApp:'));
+                      const waNum = waLine?.replace('WhatsApp: ', '').replace(/\D/g, '');
+                      const clientName = order.notes?.split('\n').find((l: string) => l.startsWith('Cliente:'))?.replace('Cliente: ', '') || '';
+                      const waMsg = encodeURIComponent(`Olá ${clientName}! Recebemos sua solicitação (${order.orderNumber}) pelo catálogo online. Em breve entraremos em contato para confirmar os detalhes.`);
+                      return waNum ? (
+                        <a
+                          id={`whatsapp-client-${order.id}`}
+                          href={`https://wa.me/55${waNum}?text=${waMsg}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="WhatsApp do cliente"
+                          style={{ display: 'inline-flex', alignItems: 'center', color: '#25d366', padding: '4px 6px', borderRadius: 6, background: 'rgba(37,211,102,0.1)' }}
+                        >
+                          <MessageCircle size={16} />
+                        </a>
+                      ) : null;
+                    })()}
                     <button className="btn btn-ghost btn-sm" title="Rastreio Público" style={{ color: 'var(--color-primary)' }} onClick={() => handleShareTracking(order)}><Share2 size={16} /></button>
                     <button className="btn btn-ghost btn-sm" title="Detalhes" onClick={() => setViewOrder(order)}><Eye size={16} /></button>
                     <button className="btn btn-ghost btn-sm" title="Editar" onClick={() => handleEdit(order)}><Edit2 size={16} /></button>
@@ -605,7 +729,8 @@ export default function OrdersPage() {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

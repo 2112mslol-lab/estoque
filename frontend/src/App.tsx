@@ -33,8 +33,10 @@ const StockItemsPage = lazy(() => import('./pages/StockItemsPage'));
 const OrderControlPage = lazy(() => import('./pages/OrderControlPage'));
 const ProductionSectorPage = lazy(() => import('./pages/ProductionSectorPage'));
 const PublicTrackingPage = lazy(() => import('./pages/PublicTrackingPage'));
+const PublicCatalogPage = lazy(() => import('./pages/PublicCatalogPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ProductionQueuePage = lazy(() => import('./pages/ProductionQueuePage'));
+
 
 
 
@@ -250,6 +252,23 @@ export default function App() {
     }
   }, [subscribe, user]);
 
+  // Notificação em tempo real quando chega pedido via catálogo
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      const unsubscribe = subscribe('catalog:new_request', (data: any) => {
+        import('react-hot-toast').then(({ default: toast }) => {
+          toast.success(
+            `🛍️ Novo pedido via catálogo!\nCliente: ${data.clientName} — ${data.itemCount} ${data.itemCount === 1 ? 'item' : 'itens'}`,
+            { duration: 8000, style: { maxWidth: 400 } }
+          );
+        });
+        fetchAlertCount();
+      });
+      return () => { unsubscribe(); };
+    }
+  }, [subscribe, user]);
+
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -264,6 +283,8 @@ export default function App() {
       <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100vw', background: 'var(--color-bg)', color: 'var(--color-text)' }}>Carregando sistema...</div>}>
         <Routes>
           <Route path="/tracking/:id" element={<PublicTrackingPage />} />
+          <Route path="/catalogo/:token" element={<PublicCatalogPage />} />
+
           
           {/* Rota Raiz que decide entre Login ou App */}
           <Route 

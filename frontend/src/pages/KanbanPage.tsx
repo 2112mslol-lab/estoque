@@ -8,10 +8,12 @@ import {
   Flame, 
   Sparkles, 
   Package, 
-  Clock, 
+  Clock,
   AlertTriangle,
   GripVertical,
   RefreshCw,
+  Trash2,
+  X,
   Droplets,
   Hammer,
   Paintbrush,
@@ -23,6 +25,7 @@ import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { ProductionStep, StepName, StepStatus } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS, STEP_STATUS_LABELS } from '../types';
+import { parseBorderType } from '../types/parseBorder';
 import api from '../services/api';
 
 const COLUMN_ICONS: Record<string, React.ReactNode> = {
@@ -35,7 +38,13 @@ const COLUMN_ICONS: Record<string, React.ReactNode> = {
   PACKAGING: <Package size={18} />,
 };
 
-function KanbanCard({ step, onUpdate, onClick }: { step: ProductionStep; onUpdate: (id: string, status: StepStatus) => void; onClick: () => void; }) {
+function KanbanCard({ step, onUpdate, onClick, onDelete, onDefect }: { 
+  step: ProductionStep; 
+  onUpdate: (id: string, status: StepStatus) => void; 
+  onClick: () => void;
+  onDelete: (step: ProductionStep) => void;
+  onDefect: (step: ProductionStep) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.id });
   
   const style = {
@@ -55,6 +64,8 @@ function KanbanCard({ step, onUpdate, onClick }: { step: ProductionStep; onUpdat
     : 0;
   
   const isQuickWin = completionPercent >= 75;
+
+  const { border: borderType } = parseBorderType(step.item?.customization);
 
   return (
     <div
@@ -93,8 +104,18 @@ function KanbanCard({ step, onUpdate, onClick }: { step: ProductionStep; onUpdat
         </span>
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12, fontWeight: 700 }}>
-        {step.item?.isStock ? '📦 Produção de Estoque' : '👤 Produção sob Demanda'}
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{step.item?.isStock ? '📦 Produção de Estoque' : '👤 Produção sob Demanda'}</span>
+        {borderType && (
+          <span style={{ 
+            background: borderType === 'COM_BORDA' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)',
+            color: borderType === 'COM_BORDA' ? 'var(--color-warning)' : 'var(--color-text-3)',
+            border: borderType === 'COM_BORDA' ? '1px solid var(--color-warning)' : '1px solid rgba(255,255,255,0.1)',
+            padding: '2px 6px', borderRadius: 4, fontSize: 10 
+          }}>
+            {borderType === 'COM_BORDA' ? '🔲 COM BORDA' : '⬜ SEM BORDA'}
+          </span>
+        )}
       </div>
 
 
@@ -124,11 +145,29 @@ function KanbanCard({ step, onUpdate, onClick }: { step: ProductionStep; onUpdat
       )}
 
       <div className="card-footer" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 700 }}>
-           {step.completedQuantity} / {step.item?.quantity} un
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>
+             {step.completedQuantity} / {step.item?.quantity} un
+          </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-           <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4, display: 'block', color: isDelayed ? 'var(--color-danger)' : 'inherit' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button 
+            className="btn btn-ghost" 
+            style={{ padding: 4, color: 'var(--color-warning)' }} 
+            onClick={(e) => { e.stopPropagation(); onDefect(step); }}
+            title="Relatar Defeito"
+          >
+            <AlertTriangle size={14} />
+          </button>
+          <button 
+            className="btn btn-ghost" 
+            style={{ padding: 4, color: 'var(--color-danger)' }} 
+            onClick={(e) => { e.stopPropagation(); onDelete(step); }}
+            title="Excluir Peça"
+          >
+            <Trash2 size={14} />
+          </button>
+          <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4, display: 'block', color: isDelayed ? 'var(--color-danger)' : 'inherit' }}>
             {step.status === 'IN_PROGRESS' ? `${Math.round(elapsedMin)} min` : 'Aguardando'}
           </span>
         </div>
@@ -139,11 +178,13 @@ function KanbanCard({ step, onUpdate, onClick }: { step: ProductionStep; onUpdat
 }
 
 
-function KanbanColumn({ stepName, steps, onUpdateStep, onCardClick }: { 
+function KanbanColumn({ stepName, steps, onUpdateStep, onCardClick, onDeleteClick, onDefectClick }: { 
   stepName: StepName; 
   steps: ProductionStep[]; 
   onUpdateStep: (id: string, status: StepStatus) => void;
   onCardClick: (step: ProductionStep) => void;
+  onDeleteClick: (step: ProductionStep) => void;
+  onDefectClick: (step: ProductionStep) => void;
 }) {
   const label = STEP_LABELS[stepName] || stepName;
   const icon = (COLUMN_ICONS as any)[stepName] || <Package size={18} />;
@@ -163,7 +204,14 @@ function KanbanColumn({ stepName, steps, onUpdateStep, onCardClick }: {
       <div className="kanban-cards">
         <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
           {steps.map((step) => (
-            <KanbanCard key={step.id} step={step} onUpdate={onUpdateStep} onClick={() => onCardClick(step)} />
+            <KanbanCard 
+              key={step.id} 
+              step={step} 
+              onUpdate={onUpdateStep} 
+              onClick={() => onCardClick(step)} 
+              onDelete={onDeleteClick}
+              onDefect={onDefectClick}
+            />
           ))}
         </SortableContext>
       </div>
@@ -291,6 +339,9 @@ export default function KanbanPage() {
   const [loading, setLoading] = useState(true);
   const [selectedStep, setSelectedStep] = useState<ProductionStep | null>(null);
 
+  const [itemToDelete, setItemToDelete] = useState<ProductionStep | null>(null);
+  const [itemToDefect, setItemToDefect] = useState<ProductionStep | null>(null);
+  const [defectReason, setDefectReason] = useState('');
 
   const fetchSteps = async () => {
     try {
@@ -319,6 +370,31 @@ export default function KanbanPage() {
       fetchSteps();
     } catch (err) {
       toast.error('Erro ao atualizar etapa');
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+    try {
+      await api.delete(`/production/items/${itemToDelete.orderItemId}`);
+      toast.success('Item excluído com sucesso');
+      setItemToDelete(null);
+      fetchSteps();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao excluir item');
+    }
+  };
+
+  const handleReportDefect = async () => {
+    if (!itemToDefect || !defectReason.trim()) return toast.error('Informe o motivo do defeito');
+    try {
+      await api.post(`/production/steps/${itemToDefect.id}/defect`, { reason: defectReason });
+      toast.success('Defeito registrado. Peça retornou para a fila inicial.');
+      setItemToDefect(null);
+      setDefectReason('');
+      fetchSteps();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao registrar defeito');
     }
   };
 
@@ -352,6 +428,8 @@ export default function KanbanPage() {
                 steps={steps.filter(s => s.stepName === col)} 
                 onUpdateStep={handleUpdateStatus}
                 onCardClick={(s) => setSelectedStep(s)} 
+                onDeleteClick={(s) => setItemToDelete(s)}
+                onDefectClick={(s) => setItemToDefect(s)}
               />
             ))}
           </DndContext>
@@ -363,6 +441,59 @@ export default function KanbanPage() {
           onClose={() => setSelectedStep(null)} 
           onRefresh={() => { fetchSteps(); setSelectedStep(prev => steps.find(s => s.id === prev?.id) || null); }}
         />
+      )}
+
+      {/* MODAL DE EXCLUSÃO */}
+      {itemToDelete && (
+        <div className="modal-overlay" onClick={() => setItemToDelete(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ color: 'var(--color-danger)' }}>Excluir Peça</h2>
+              <button className="btn btn-ghost" onClick={() => setItemToDelete(null)}><X size={20}/></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--color-text-2)', marginBottom: 20 }}>
+                Tem certeza que deseja excluir esta peça da produção? Esta ação não pode ser desfeita.
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" onClick={() => setItemToDelete(null)}>Cancelar</button>
+                <button className="btn btn-danger" onClick={handleDeleteItem}>Sim, Excluir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DEFEITO */}
+      {itemToDefect && (
+        <div className="modal-overlay" onClick={() => setItemToDefect(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ color: 'var(--color-warning)' }}>Relatar Defeito</h2>
+              <button className="btn btn-ghost" onClick={() => setItemToDefect(null)}><X size={20}/></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--color-text-2)', marginBottom: 16 }}>
+                Esta peça será marcada com defeito e retornará para a primeira etapa da produção.
+              </p>
+              <div className="form-group">
+                <label className="form-label">Qual o motivo do defeito?</label>
+                <textarea
+                  className="form-input"
+                  style={{ minHeight: 80, resize: 'vertical' }}
+                  placeholder="Ex: Peça arranhada, quebrou na borda, etc."
+                  value={defectReason}
+                  onChange={e => setDefectReason(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
+                <button className="btn btn-secondary" onClick={() => setItemToDefect(null)}>Cancelar</button>
+                <button className="btn btn-primary" style={{ background: 'var(--color-warning)', color: 'black' }} onClick={handleReportDefect}>Confirmar Retorno</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

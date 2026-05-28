@@ -10,6 +10,13 @@ const router = Router();
 router.use(authenticate);
 router.use(authorize(['ADMIN']));
 
+// GET /api/configs/catalog-link - Retornar link secreto do catálogo
+router.get('/catalog-link', (_req, res) => {
+  const token = process.env.CATALOG_SECRET_TOKEN || 'catalogo-toque-ideal-2025';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  res.json({ link: `${frontendUrl}/catalogo/${token}` });
+});
+
 // GET /api/configs/templates - Listar templates de etapas
 router.get('/templates', async (_req, res) => {
   try {

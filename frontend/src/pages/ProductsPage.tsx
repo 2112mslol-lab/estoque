@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Trash2, Package, Pencil, Check, X, Palette, Tag, ChevronDown, ChevronUp, Camera, ImageOff } from 'lucide-react';
+import { Plus, Trash2, Package, Pencil, Check, X, Palette, Tag, ChevronDown, ChevronUp, Camera, ImageOff, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { Product } from '../types';
@@ -153,6 +153,17 @@ export default function ProductsPage() {
     }
   };
 
+  const handleShareCatalog = async () => {
+    try {
+      const res = await api.get('/configs/catalog-link');
+      const link = res.data.link;
+      await navigator.clipboard.writeText(link);
+      toast.success('Link do catálogo copiado para a área de transferência!');
+    } catch {
+      toast.error('Erro ao buscar o link do catálogo');
+    }
+  };
+
   const handleStartEdit = (prod: Product) => {
     setEditingProduct({
       id: prod.id,
@@ -277,9 +288,14 @@ export default function ProductsPage() {
           <h1 className="page-title">Catálogo de Modelos</h1>
           <p className="page-subtitle">Gerencie os itens que sua fábrica produz, com fotos, cores e detalhes técnicos</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setShowModal(true); setEditingProduct(null); }}>
-          <Plus size={16} /> Novo Modelo
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn btn-secondary" onClick={handleShareCatalog} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Share2 size={16} /> Compartilhar Catálogo
+          </button>
+          <button className="btn btn-primary" onClick={() => { setShowModal(true); setEditingProduct(null); }}>
+            <Plus size={16} /> Novo Modelo
+          </button>
+        </div>
       </div>
 
       {/* Grid de cards */}
