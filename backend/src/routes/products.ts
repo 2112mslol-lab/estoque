@@ -11,7 +11,11 @@ router.use(authenticate);
 
 // ── Configuração do Multer (disco local) ──────────────────────────────────────
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'products');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch (e) {
+  console.warn('⚠️ Impossível criar pasta uploads/products (ambiente read-only da Vercel)');
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
