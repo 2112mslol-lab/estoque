@@ -27,6 +27,7 @@ import type { ProductionStep, StepName, StepStatus } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS, STEP_STATUS_LABELS } from '../types';
 import { parseBorderType } from '../types/parseBorder';
 import api from '../services/api';
+import { CustomizationBadge } from '../components/CustomizationBadge';
 
 const COLUMN_ICONS: Record<string, React.ReactNode> = {
   CUTTING: <Scissors size={18} />,
@@ -65,58 +66,11 @@ function KanbanCard({ step, onUpdate, onClick, onDelete, onDefect }: {
   
   const isQuickWin = completionPercent >= 75;
 
-  const { border: borderType } = parseBorderType(step.item?.customization);
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`kanban-card ${hasUrgency ? 'urgent' : ''} ${isDelayed ? 'delayed' : ''} ${isQuickWin ? 'quick-win' : ''}`}
-      onClick={onClick}
-      style={{
-        ...style,
-        borderTop: isQuickWin ? '4px solid #10b981' : undefined,
-        boxShadow: isQuickWin ? '0 0 15px rgba(16, 185, 129, 0.2)' : (step.item?.priorityRank === 1 ? '0 0 12px var(--color-warning)' : undefined),
-        border: step.item?.priorityRank === 1 ? '2px solid var(--color-warning)' : undefined
-      } as any}
-
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: hasUrgency ? 'var(--color-danger)' : 'var(--color-primary)' }}>
-              {step.item?.order?.orderNumber}
-            </span>
-            {step.item?.priorityRank && (
-              <span style={{ fontSize: 10, background: step.item.priorityRank === 1 ? 'var(--color-warning)' : 'var(--color-surface-3)', color: step.item.priorityRank === 1 ? 'black' : 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900, border: '1px solid rgba(255,255,255,0.1)' }}>
-                {step.item.priorityRank}º FILA
-              </span>
-            )}
-            {hasUrgency && <span style={{ fontSize: 8, background: 'var(--color-danger)', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>URGENTE</span>}
-            {isQuickWin && <span style={{ fontSize: 8, background: '#10b981', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>QUASE PRONTO</span>}
-
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>
-            {step.item?.quantity}x {step.item?.productName}
-          </span>
-        </div>
-        <span {...attributes} {...listeners} style={{ cursor: 'grab', color: 'var(--color-text-3)' }}>
-          <GripVertical size={14} />
-        </span>
-      </div>
-
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span>{step.item?.isStock ? '📦 Produção de Estoque' : '👤 Produção sob Demanda'}</span>
-        {borderType && (
-          <span style={{ 
-            background: borderType === 'COM_BORDA' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)',
-            color: borderType === 'COM_BORDA' ? 'var(--color-warning)' : 'var(--color-text-3)',
-            border: borderType === 'COM_BORDA' ? '1px solid var(--color-warning)' : '1px solid rgba(255,255,255,0.1)',
-            padding: '2px 6px', borderRadius: 4, fontSize: 10 
-          }}>
-            {borderType === 'COM_BORDA' ? '🔲 COM BORDA' : '⬜ SEM BORDA'}
-          </span>
-        )}
       </div>
+
+      <CustomizationBadge text={step.item?.customization} />
 
 
       {/* Barra de Progresso do Item */}

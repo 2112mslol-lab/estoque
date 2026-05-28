@@ -195,11 +195,12 @@ router.post('/catalog/:token/request', async (req, res) => {
 
     // Validar que os produtos existem
     const productIds = items.map((i: any) => i.productId);
+    const uniqueProductIds = [...new Set(productIds)];
     const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
+      where: { id: { in: uniqueProductIds } },
     });
 
-    if (products.length !== productIds.length) {
+    if (products.length !== uniqueProductIds.length) {
       return res.status(400).json({ error: 'Um ou mais produtos não foram encontrados.' });
     }
 

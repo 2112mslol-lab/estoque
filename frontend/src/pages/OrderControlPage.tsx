@@ -14,6 +14,7 @@ import type { Order } from '../types';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { CustomizationBadge } from '../components/CustomizationBadge';
 
 export default function OrderControlPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -66,10 +67,11 @@ export default function OrderControlPage() {
   };
 
   const filtered = orders
-    .filter(o => 
-      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      o.client.name.toLowerCase().includes(search.toLowerCase())
-    )
+    .filter(o => {
+      const clientName = o.client?.name || o.notes?.split('\n').find((l: string) => l.startsWith('Cliente:'))?.replace('Cliente:', '').trim() || '';
+      return o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+             clientName.toLowerCase().includes(search.toLowerCase());
+    })
     .filter(o => {
       if (filterReadiness === 'ALL') return true;
       const allCompletedInProduction = o.items.every(i => i.status === 'COMPLETED');
@@ -170,7 +172,7 @@ export default function OrderControlPage() {
                     {!isFinished && !allCompletedInProduction && <span className="badge badge-warning">EM PRODUÇÃO</span>}
                     {!isFinished && allCompletedInProduction && <span className="badge badge-primary">PRONTO P/ EXPEDIÇÃO</span>}
                   </div>
-                  <div style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>{order.client.name}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>{order.client?.name || order.notes?.split('\n').find((l: string) => l.startsWith('Cliente:'))?.replace('Cliente:', '').trim() || 'Desconhecido'}</div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 4 }}>
                     Entrega: {format(new Date(order.deliveryDate), "dd/MM/yyyy", { locale: ptBR })}
                   </div>
@@ -209,6 +211,7 @@ export default function OrderControlPage() {
                       <div style={{ fontWeight: 700, fontSize: 14, color: item.isPicked ? 'var(--color-text-1)' : 'var(--color-text-2)' }}>
                         {item.quantity}x {item.productName}
                       </div>
+                      <CustomizationBadge text={item.customization} />
                       <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                         {item.status === 'COMPLETED' ? '📦 Embalado / Pronto' : '⚙️ Em Produção'}
                       </div>

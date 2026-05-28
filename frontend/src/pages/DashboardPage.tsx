@@ -210,7 +210,7 @@ export default function DashboardPage() {
               <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid var(--color-border)' }}>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 14 }}>ORD {order.orderNumber}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{order.client.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{order.client?.name || order.notes?.split('\n').find((l: string) => l.startsWith('Cliente:'))?.replace('Cliente:', '').trim() || 'Desconhecido'}</div>
                 </div>
                 <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ textAlign: 'right' }}>

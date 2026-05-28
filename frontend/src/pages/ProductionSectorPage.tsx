@@ -18,8 +18,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { ProductionStep, Order, Product } from '../types';
-import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS } from '../types';
+import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS, STEP_STATUS_LABELS } from '../types';
 import { parseBorderType, BorderType, buildCustomization } from '../types/parseBorder';
+import { CustomizationBadge } from '../components/CustomizationBadge';
 import api from '../services/api';
 
 export default function ProductionSectorPage() {
@@ -446,56 +447,8 @@ export default function ProductionSectorPage() {
                      </div>
 
                      {/* Cor / Personalização e Tipo de Borda — destaque visual para o operador */}
-                     <div style={{
-                       marginTop: 10,
-                       display: 'flex',
-                       flexDirection: 'column',
-                       gap: 8,
-                     }}>
-                       {/* Badge de Borda */}
-                       {borderType && (
-                         <div style={{
-                           display: 'inline-flex', alignItems: 'center', gap: 6,
-                           background: borderType === 'COM_BORDA' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)',
-                           border: borderType === 'COM_BORDA' ? '1.5px solid var(--color-warning)' : '1px solid rgba(255,255,255,0.1)',
-                           color: borderType === 'COM_BORDA' ? 'var(--color-warning)' : 'var(--color-text-3)',
-                           padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 800,
-                           alignSelf: 'flex-start'
-                         }}>
-                           {borderType === 'COM_BORDA' ? '🔲 COM BORDA' : '⬜ SEM BORDA'}
-                         </div>
-                       )}
-
-                       {/* Extrai cor hexadecimal se houver "Cor: #XXXXXX" */}
-                       {customizationText && (() => {
-                         const hexMatch = customizationText.match(/#([0-9A-Fa-f]{6})\b/);
-                         const hex = hexMatch ? hexMatch[0] : null;
-                         return (
-                           <div style={{
-                             display: 'inline-flex',
-                             alignItems: 'center',
-                             gap: 8,
-                             background: 'rgba(59,130,246,0.10)',
-                             border: '1.5px solid rgba(59,130,246,0.35)',
-                             borderRadius: 8,
-                             padding: '7px 12px',
-                             fontSize: 13,
-                             fontWeight: 800,
-                             color: '#60a5fa',
-                             maxWidth: '100%',
-                             alignSelf: 'flex-start',
-                           }}>
-                             🎨
-                             {hex && (
-                               <span style={{
-                                 display: 'inline-block', width: 18, height: 18, borderRadius: 4,
-                                 background: hex, border: '2px solid rgba(255,255,255,0.25)', flexShrink: 0,
-                               }} title={hex} />
-                             )}
-                             <span style={{ wordBreak: 'break-word' }}>{customizationText}</span>
-                           </div>
-                         );
-                       })()}
+                     <div style={{ marginTop: 10 }}>
+                       <CustomizationBadge text={step.item?.customization} />
                      </div>
                    </div>
                   
