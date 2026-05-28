@@ -156,7 +156,11 @@ export default function ProductsPage() {
   const handleShareCatalog = async () => {
     try {
       const res = await api.get('/configs/catalog-link');
-      const link = res.data.link;
+      // Extrair o token do link ou usar o padrão se o backend retornar a URL completa
+      const linkBackend = res.data.link || '';
+      const token = linkBackend.split('/').pop() || 'catalogo-toque-ideal-2025';
+      const link = `${window.location.origin}/catalogo/${token}`;
+      
       await navigator.clipboard.writeText(link);
       toast.success('Link do catálogo copiado para a área de transferência!');
     } catch {
