@@ -8,6 +8,61 @@ const router = Router();
 
 router.use(authenticate);
 
+// GET /api/production/history - Histórico de peças concluídas por período
+router.get('/history', authorize(['ADMIN', 'USER']), async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const whereClause: any = {
+      status: StepStatus.COMPLETED
+    };
+
+    if (startDate && endDate) {
+      const start = new Date(startDate as string);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate as string);
+      end.setHours(23, 59, 59, 999);
+
+      whereClause.completedAt = {
+        gte: start,
+        lte: end
+      };
+    } else {
+      // Por padrão, pega do dia atual se não informar datas
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      whereClause.completedAt = {
+        gte: todayStart,
+        lte: todayEnd
+      };
+    }
+
+    const steps = await prisma.productionStep.findMany({
+      where: whereClause,
+      include: {
+        item: {
+          include: {
+            order: {
+              include: { client: true }
+            }
+          }
+        }
+      },
+      orderBy: { completedAt: 'desc' }
+    });
+
+    res.json(steps);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao buscar histórico de produção' });
+  }
+});
+
 // GET /api/production/backlog - Itens aguardando início de produção
 router.get('/backlog', authorize(['ADMIN']), async (req, res) => {
   try {

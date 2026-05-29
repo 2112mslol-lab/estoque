@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Settings,
   Menu,
-  Share2
+  Share2,
+  History
 } from 'lucide-react';
 
 import { useSocket } from './hooks/useSocket';
@@ -38,10 +39,7 @@ const PublicCatalogPage = lazy(() => import('./pages/PublicCatalogPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ProductionQueuePage = lazy(() => import('./pages/ProductionQueuePage'));
 const ShareCatalogPage = lazy(() => import('./pages/ShareCatalogPage'));
-
-
-
-
+const ProductionHistoryPage = lazy(() => import('./pages/ProductionHistoryPage'));
 
 function Sidebar({ alertCount, onLogout, sectors, user, isOpen, onClose }: { alertCount: number, onLogout: () => void, sectors: any[], user: any, isOpen?: boolean, onClose?: () => void }) {
   const [showProduction, setShowProduction] = useState(true);
@@ -98,6 +96,10 @@ function Sidebar({ alertCount, onLogout, sectors, user, isOpen, onClose }: { ale
           <NavLink to="/kanban" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <Package size={20} />
             <span>Fila Global</span>
+          </NavLink>
+          <NavLink to="/production-history" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <History size={20} />
+            <span>Histórico</span>
           </NavLink>
           <NavLink to="/" onClick={handleLinkClick} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
             <LayoutDashboard size={20} />
@@ -324,6 +326,7 @@ export default function App() {
                         <Route path="/order-control" element={user?.role === 'ADMIN' ? <OrderControlPage /> : <Navigate to="/" />} />
                         <Route path="/stock-items" element={user?.role === 'ADMIN' ? <StockItemsPage /> : <Navigate to="/" />} />
                         <Route path="/kanban" element={<KanbanPage />} />
+                        <Route path="/production-history" element={<ProductionHistoryPage />} />
                         <Route path="/products" element={user?.role === 'ADMIN' ? <ProductsPage /> : <Navigate to="/" />} />
                         <Route path="/share-catalog" element={user?.role === 'ADMIN' ? <ShareCatalogPage /> : <Navigate to="/" />} />
                         <Route path="/alerts" element={<AlertsPage onMarkRead={fetchAlertCount} />} />
