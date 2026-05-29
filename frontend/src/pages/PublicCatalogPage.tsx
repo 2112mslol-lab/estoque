@@ -47,7 +47,7 @@ type Step = 'catalog' | 'cart' | 'form' | 'success';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001');
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function formatCpfCnpj(value: string): string {
   const digits = value.replace(/\D/g, '');

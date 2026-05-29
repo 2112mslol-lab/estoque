@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { Product } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001');
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getImageUrl(imageUrl: string | null | undefined): string | null {
   if (!imageUrl) return null;
