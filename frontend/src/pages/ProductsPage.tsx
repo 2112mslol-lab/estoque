@@ -97,10 +97,15 @@ export default function ProductsPage() {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      await api.post(`/products/${productId}/image`, formData, {
+      const res = await api.post(`/products/${productId}/image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       toast.success('Foto atualizada!');
+      
+      if (editingProduct && editingProduct.id === productId) {
+        setEditingProduct(prev => prev ? { ...prev, imageUrl: res.data.imageUrl } : null);
+      }
+      
       fetchProducts();
     } catch {
       toast.error('Erro ao fazer upload da imagem');
@@ -113,6 +118,11 @@ export default function ProductsPage() {
     try {
       await api.delete(`/products/${productId}/image`);
       toast.success('Foto removida');
+      
+      if (editingProduct && editingProduct.id === productId) {
+        setEditingProduct(prev => prev ? { ...prev, imageUrl: undefined } : null);
+      }
+      
       fetchProducts();
     } catch {
       toast.error('Erro ao remover imagem');
