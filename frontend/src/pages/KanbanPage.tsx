@@ -27,6 +27,7 @@ import type { ProductionStep, StepName, StepStatus } from '../types';
 import { STEP_LABELS, STEP_COLORS, STEP_EMOJIS, STEP_STATUS_LABELS } from '../types';
 import { parseBorderType } from '../types/parseBorder';
 import api from '../services/api';
+import { CustomizationBadge } from '../components/CustomizationBadge';
 
 const COLUMN_ICONS: Record<string, React.ReactNode> = {
   CUTTING: <Scissors size={18} />,
