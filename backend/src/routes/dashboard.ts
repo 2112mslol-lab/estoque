@@ -36,7 +36,6 @@ router.get('/', async (_req, res) => {
       },
       include: {
         client: { select: { name: true } },
-        notes: true,
         items: { 
           include: { 
             productionSteps: { 
@@ -54,7 +53,7 @@ router.get('/', async (_req, res) => {
         deliveryDate: { gte: now, lte: in3Days },
         status: { notIn: ['DELIVERED', 'CANCELLED', 'FINISHED'] },
       },
-      include: { client: { select: { name: true } }, notes: true },
+      include: { client: { select: { name: true } } },
       orderBy: { deliveryDate: 'asc' },
     });
 
