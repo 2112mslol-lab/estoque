@@ -94,9 +94,10 @@ ensureInitialUsers();
 
 
 // WebSocket
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.NODE_ENV === 'production' ? allowedOrigin : "*",
     methods: ['GET', 'POST'],
   },
 });
@@ -105,7 +106,6 @@ const io = new Server(httpServer, {
 (global as any).io = io;
 
 // Middlewares
-const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' ? allowedOrigin : true,
   credentials: true,
