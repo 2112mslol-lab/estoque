@@ -17,17 +17,11 @@ try {
   console.warn('⚠️ Impossível criar pasta uploads/products (ambiente read-only da Vercel)');
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
   fileFilter: (_req, file, cb) => {
     const allowed = [
       'image/jpeg', 'image/png', 'image/webp', 'image/gif', 
@@ -93,20 +87,23 @@ router.post(
     if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
 
     try {
-      // Busca produto para deletar imagem antiga
+      // Busca produto para deletar imagem antiga se for arquivo local
       const existing = await prisma.product.findUnique({ where: { id } });
-      if (existing?.imageUrl) {
+      if (existing?.imageUrl && !existing.imageUrl.startsWith('data:')) {
         const oldPath = path.join(process.cwd(), existing.imageUrl);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
 
-      const relPath = `uploads/products/${req.file.filename}`;
+      const base64Data = req.file.buffer.toString('base64');
+      const dataUri = `data:${req.file.mimetype};base64,${base64Data}`;
+
       const product = await prisma.product.update({
         where: { id },
-        data: { imageUrl: relPath },
+        data: { imageUrl: dataUri },
       });
       res.json(product);
-    } catch {
+    } catch (error) {
+      console.error('Erro ao salvar imagem:', error);
       res.status(500).json({ error: 'Erro ao salvar imagem' });
     }
   }
@@ -117,7 +114,7 @@ router.delete('/:id/image', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   try {
     const existing = await prisma.product.findUnique({ where: { id } });
-    if (existing?.imageUrl) {
+    if (existing?.imageUrl && !existing.imageUrl.startsWith('data:')) {
       const oldPath = path.join(process.cwd(), existing.imageUrl);
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
@@ -133,7 +130,7 @@ router.delete('/:id', authorize(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   try {
     const existing = await prisma.product.findUnique({ where: { id } });
-    if (existing?.imageUrl) {
+    if (existing?.imageUrl && !existing.imageUrl.startsWith('data:')) {
       const oldPath = path.join(process.cwd(), existing.imageUrl);
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }

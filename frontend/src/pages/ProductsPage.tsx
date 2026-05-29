@@ -4,7 +4,13 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { Product } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001');
+
+function getImageUrl(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('data:')) return imageUrl;
+  return `${API_BASE}/${imageUrl}`;
+}
 
 const PRESET_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#10b981',
@@ -39,7 +45,7 @@ function ProductImage({ imageUrl, name, size = 64 }: { imageUrl?: string; name: 
   }
   return (
     <img
-      src={`${API_BASE}/${imageUrl}`}
+      src={getImageUrl(imageUrl) || ''}
       alt={name}
       onError={() => setError(true)}
       style={{
@@ -238,7 +244,7 @@ export default function ProductsPage() {
         {imageUrl ? (
           <>
             <img
-              src={`${API_BASE}/${imageUrl}`}
+              src={getImageUrl(imageUrl) || ''}
               alt="produto"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
@@ -376,7 +382,7 @@ export default function ProductsPage() {
                     {isEditing ? (
                       <UploadZone productId={prod.id} imageUrl={editingProduct?.imageUrl} />
                     ) : prod.imageUrl ? (
-                      <img src={`${API_BASE}/${prod.imageUrl}`} alt={prod.name}
+                      <img src={getImageUrl(prod.imageUrl) || ''} alt={prod.name}
                         style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}
                       />
                     ) : (

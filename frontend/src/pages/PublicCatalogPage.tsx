@@ -47,7 +47,7 @@ type Step = 'catalog' | 'cart' | 'form' | 'success';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001');
 
 function formatCpfCnpj(value: string): string {
   const digits = value.replace(/\D/g, '');
@@ -79,6 +79,7 @@ function formatPhone(value: string): string {
 
 function getImageUrl(imageUrl: string | null): string | null {
   if (!imageUrl) return null;
+  if (imageUrl.startsWith('data:')) return imageUrl;
   return `${API_BASE}/${imageUrl}`;
 }
 
