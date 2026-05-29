@@ -202,7 +202,7 @@ export default function CommandPalette() {
       onClick={() => setIsOpen(true)}
       style={{ 
         position: 'fixed', 
-        bottom: 24, 
+        bottom: 90, 
         right: 24, 
         zIndex: 999, 
         borderRadius: 30, 

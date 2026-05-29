@@ -70,7 +70,7 @@ h1, h2, h3, .logo-text {
 }
 
 .sidebar.open {
-  transform: translateX(0);
+  transform: translateX(0) !important;
 }
 
 .sidebar-overlay {

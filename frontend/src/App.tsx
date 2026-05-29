@@ -269,7 +269,7 @@ export default function App() {
             `🛍️ Novo pedido via catálogo!\nCliente: ${data.clientName} — ${data.itemCount} ${data.itemCount === 1 ? 'item' : 'itens'}`,
             { duration: 8000, style: { maxWidth: 400 } }
           );
-        });
+        }).catch(err => console.error("Toast import failed", err));
         fetchAlertCount();
       });
       return () => { unsubscribe(); };
