@@ -1,5 +1,5 @@
 {
-  "name": "calixto-glass-backend",
+  "name": "konnexy-backend",
   "version": "1.0.0",
   "description": "Backend para o sistema de gerenciamento de produção da Serralheria Calixto",
   "main": "dist/index.js",

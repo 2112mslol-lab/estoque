@@ -58,7 +58,7 @@ function Sidebar({ alertCount, onLogout, sectors, user, isOpen, onClose }: { ale
       )}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="logo-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 40 }}>
-          <img src="/logo.png" alt="Toque Ideal" style={{ height: 40, width: 'auto' }} />
+          <img src="/logo.png" alt="Konnexy" style={{ height: 40, width: 'auto' }} />
           {isOpen && (
             <button 
               onClick={onClose} 
@@ -174,7 +174,7 @@ function MobileHeader({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         <Menu size={24} />
       </button>
       <div className="mobile-logo">
-        <img src="/logo.png" alt="Toque Ideal" style={{ height: 28, width: 'auto' }} />
+        <img src="/logo.png" alt="Konnexy" style={{ height: 28, width: 'auto' }} />
       </div>
       <div style={{ width: 24 }}></div>
     </header>

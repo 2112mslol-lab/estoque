@@ -263,7 +263,7 @@ export default function ShareCatalogPage() {
                   printWindow.document.write(`
                     <html>
                       <head>
-                        <title>QR Code - Catálogo Toque Ideal</title>
+                        <title>QR Code - Catálogo Konnexy</title>
                         <style>
                           body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #fff; color: #000; }
                           h1 { margin-bottom: 5px; }
@@ -272,7 +272,7 @@ export default function ShareCatalogPage() {
                         </style>
                       </head>
                       <body onload="window.print()">
-                        <h1>Toque Ideal</h1>
+                        <h1>Konnexy</h1>
                         <p>Aponte a câmera para fazer seu pedido pelo catálogo online</p>
                         <img src="${qrCodeUrl}" alt="QR Code" />
                       </body>

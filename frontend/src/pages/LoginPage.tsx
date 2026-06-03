@@ -37,7 +37,7 @@ export default function LoginPage({ onLogin }: { onLogin: (user: any) => void })
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <img 
             src="/logo.png" 
-            alt="Toque Ideal" 
+            alt="Konnexy" 
             style={{ 
               maxWidth: 200, 
               height: 'auto', 

@@ -391,7 +391,7 @@ export default function PublicCatalogPage() {
         </div>
         <h1 style={{ color: '#f8fafc', fontSize: 28, fontWeight: 800, margin: 0 }}>Acesso não autorizado</h1>
         <p style={{ color: '#94a3b8', maxWidth: 360, lineHeight: 1.6 }}>
-          Este link de catálogo é inválido ou expirou. Entre em contato com a <strong style={{ color: '#f8fafc' }}>Toque Ideal</strong> para obter um novo link de acesso.
+          Este link de catálogo é inválido ou expirou. Entre em contato com a <strong style={{ color: '#f8fafc' }}>Konnexy</strong> para obter um novo link de acesso.
         </p>
         {companyWhatsapp && (
           <a
@@ -405,7 +405,7 @@ export default function PublicCatalogPage() {
               fontSize: 15,
             }}
           >
-            <MessageCircle size={18} /> Falar com a Toque Ideal
+            <MessageCircle size={18} /> Falar com a Konnexy
           </a>
         )}
       </div>
@@ -543,10 +543,10 @@ export default function PublicCatalogPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src="/logo.png" alt="Toque Ideal" style={{ height: 36, width: 'auto' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <img src="/logo.png" alt="Konnexy" style={{ height: 36, width: 'auto' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: '#f8fafc' }}>Catálogo</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>Toque Ideal</div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>Konnexy</div>
           </div>
         </div>
 
@@ -1045,7 +1045,7 @@ export default function PublicCatalogPage() {
 
                 <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.5, display: 'flex', gap: 6 }}>
                   <Lock size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-                  Seus dados são utilizados apenas para contato e confirmação do pedido pela Toque Ideal.
+                  Seus dados são utilizados apenas para contato e confirmação do pedido pela Konnexy.
                 </p>
 
                 <button

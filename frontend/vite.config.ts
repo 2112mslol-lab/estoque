@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Toque Ideal',
-        short_name: 'Toque Ideal',
+        name: 'Konnexy',
+        short_name: 'Konnexy',
         description: 'Sistema de Produção Calixto Glass',
         theme_color: '#1a1d2d',
         background_color: '#0e1019',

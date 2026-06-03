@@ -472,7 +472,7 @@ export default function OrdersPage() {
 
   const handleShareTracking = (order: Order) => {
     const trackingUrl = `${window.location.origin}/tracking/${order.id}`;
-    const message = `Olá! Acompanhe o progresso do seu pedido na Toque Ideal através deste link: ${trackingUrl}`;
+    const message = `Olá! Acompanhe o progresso do seu pedido na Konnexy através deste link: ${trackingUrl}`;
     
     navigator.clipboard.writeText(message).then(() => {
       toast.success('Mensagem de rastreio copiada!');
